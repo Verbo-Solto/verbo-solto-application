@@ -97,6 +97,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import logoUrl from '../assets/LogoVerboSolto.png'
+import { login as loginService } from '../services/authService'
+import axios from 'axios'
 
 export default {
   name: "RegisterView",
@@ -119,12 +121,16 @@ export default {
 
       if (valid) {
         try {
-          console.log("Tentando cadastrar com:", { 
-            fullName: fullName.value,
+          // Cria o usuário no backend Django via endpoint REST
+          await axios.post('http://localhost:8000/api/register/', {
             username: username.value,
-            email: email.value 
+            email: email.value,
+            password: password.value,
+            full_name: fullName.value,
           })
-          alert(`Cadastro bem-sucedido para ${email.value}!`)
+          // Após cadastro, faz login automático
+          await loginService(username.value, password.value)
+          alert(`Cadastro e login bem-sucedidos para ${email.value}!`)
           router.push('/') 
         } catch (error) {
           console.error("Erro no cadastro:", error)

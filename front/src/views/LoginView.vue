@@ -72,6 +72,8 @@
 
 <script>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { login as loginService } from '../services/authService'
 import logoUrl from '../assets/LogoVerboSolto.png'
 
 export default {
@@ -80,6 +82,7 @@ export default {
     const email = ref("")
     const password = ref("")
     const showPassword = ref(false)
+    const router = useRouter()
 
     const rules = {
       required: value => !!value || "Campo obrigatório.",
@@ -89,11 +92,13 @@ export default {
     const handleLogin = async () => {
       if (email.value && password.value && /.+@.+\..+/.test(email.value)) {
         try {
-          console.log("Tentando login com:", email.value)
+          // O backend espera username, não email
+          await loginService(email.value, password.value)
           alert(`Login bem-sucedido com ${email.value}`)
+          router.push('/')
         } catch (error) {
           console.error("Erro no login:", error)
-          alert("Erro ao fazer login. Tente novamente.")
+          alert("Erro ao fazer login. Verifique suas credenciais.")
         }
       } else {
         alert("Por favor, preencha todos os campos corretamente.")
