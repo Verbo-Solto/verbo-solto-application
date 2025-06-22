@@ -13,7 +13,7 @@ export default function PaginaInicial() {
   return (
     <div className="min-h-screen bg-[#fefefe]">
       <Cabecalho onAuthClick={setModalAuth} />
-      <Heroi onComecar={() => setModalAuth("cadastro")} />
+      <Heroi onAuthClick={setModalAuth} />
       <ObrasDestaque />
       <Rodape />
 

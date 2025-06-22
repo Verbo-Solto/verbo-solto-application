@@ -11,7 +11,7 @@ export function Rodape() {
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Seção Principal */}
-        <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Logo e Descrição */}
           <div className="lg:col-span-1">
             <div className="mb-4">
@@ -102,23 +102,6 @@ export function Rodape() {
                 </Link>
               </li>
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-[#009c3b]">Newsletter</h3>
-            <p className="text-gray-300 mb-4">Receba novidades sobre literatura cearense e novos autores.</p>
-            <div className="space-y-3">
-              <Input
-                type="email"
-                placeholder="Seu e-mail"
-                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-[#009c3b]"
-              />
-              <Button className="w-full bg-[#009c3b] hover:bg-[#009c3b]/90">
-                <Mail className="w-4 h-4 mr-2" />
-                Inscrever-se
-              </Button>
-            </div>
           </div>
         </div>
 
