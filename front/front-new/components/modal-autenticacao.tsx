@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { X, Eye, EyeOff, BookOpen } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/hooks/useAuth"
 
 interface ModalAutenticacaoProps {
   modo: "login" | "cadastro"
@@ -28,6 +29,7 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
   })
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const { login } = useAuth();
 
   const cidades = [
     "Fortaleza",
@@ -87,7 +89,6 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
     setCarregando(true);
     try {
       if (modo === "login") {
-        // Login: chama /api/token/ do backend Django
         const resp = await fetch("http://localhost:8000/api/token/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -97,14 +98,10 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
         if (!resp.ok) throw new Error(data.detail || "Erro ao fazer login");
         localStorage.setItem("access", data.access);
         localStorage.setItem("refresh", data.refresh);
+        // Simples: salva o usuário no contexto
+        login({ nome: dadosFormulario.email.split("@")[0], email: dadosFormulario.email });
         onFechar();
       } else {
-        // Cadastro: chama /api/register/ do backend Django
-        if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
-          setErro("As senhas não coincidem.");
-          setCarregando(false);
-          return;
-        }
         const resp = await fetch("http://localhost:8000/api/register/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -129,6 +126,7 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
         if (!loginResp.ok) throw new Error(loginData.detail || "Erro ao fazer login após cadastro");
         localStorage.setItem("access", loginData.access);
         localStorage.setItem("refresh", loginData.refresh);
+        login({ nome: dadosFormulario.nome, email: dadosFormulario.email });
         onFechar();
       }
     } catch (err: any) {
