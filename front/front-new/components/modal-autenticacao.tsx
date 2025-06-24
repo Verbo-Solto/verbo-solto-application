@@ -26,6 +26,8 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
     cidade: "",
     biografia: "",
   })
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
   const cidades = [
     "Fortaleza",
@@ -45,11 +47,95 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
     "Aracati",
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Implementar lógica de autenticação
-    console.log("Formulário enviado:", { modo, dadosFormulario })
-    onFechar()
+  const validarEmail = (email: string) => /.+@.+\..+/.test(email);
+
+  // Validações de formulário
+  const validarCampos = () => {
+    if (!dadosFormulario.email || !dadosFormulario.senha) {
+      setErro("Preencha o e-mail e a senha.");
+      return false;
+    }
+    if (!validarEmail(dadosFormulario.email)) {
+      setErro("Digite um e-mail válido.");
+      return false;
+    }
+    if (modo === "cadastro") {
+      if (!dadosFormulario.nome) {
+        setErro("Preencha o nome completo.");
+        return false;
+      }
+      if (dadosFormulario.senha.length < 6) {
+        setErro("A senha deve ter pelo menos 6 caracteres.");
+        return false;
+      }
+      if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
+        setErro("As senhas não coincidem.");
+        return false;
+      }
+      if (!dadosFormulario.cidade) {
+        setErro("Selecione sua cidade.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErro("");
+    if (!validarCampos()) return;
+    setCarregando(true);
+    try {
+      if (modo === "login") {
+        // Login: chama /api/token/ do backend Django
+        const resp = await fetch("http://localhost:8000/api/token/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: dadosFormulario.email, password: dadosFormulario.senha })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || "Erro ao fazer login");
+        localStorage.setItem("access", data.access);
+        localStorage.setItem("refresh", data.refresh);
+        onFechar();
+      } else {
+        // Cadastro: chama /api/register/ do backend Django
+        if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
+          setErro("As senhas não coincidem.");
+          setCarregando(false);
+          return;
+        }
+        const resp = await fetch("http://localhost:8000/api/register/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: dadosFormulario.email,
+            email: dadosFormulario.email,
+            password: dadosFormulario.senha,
+            full_name: dadosFormulario.nome,
+            cidade: dadosFormulario.cidade,
+            biografia: dadosFormulario.biografia
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Erro ao cadastrar");
+        // Login automático após cadastro
+        const loginResp = await fetch("http://localhost:8000/api/token/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: dadosFormulario.email, password: dadosFormulario.senha })
+        });
+        const loginData = await loginResp.json();
+        if (!loginResp.ok) throw new Error(loginData.detail || "Erro ao fazer login após cadastro");
+        localStorage.setItem("access", loginData.access);
+        localStorage.setItem("refresh", loginData.refresh);
+        onFechar();
+      }
+    } catch (err: any) {
+      setErro(err.message || "Erro inesperado");
+    } finally {
+      setCarregando(false);
+    }
   }
 
   return (
@@ -78,6 +164,7 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
 
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {erro && <div className="text-red-600 text-sm mb-2" role="alert">{erro}</div>}
             {modo === "cadastro" && (
               <div>
                 <Label htmlFor="nome" className="text-sm font-medium text-[#131313]">
@@ -186,8 +273,8 @@ export function ModalAutenticacao({ modo, onFechar, onTrocarModo }: ModalAutenti
               </>
             )}
 
-            <Button type="submit" className="w-full bg-[#009c3b] hover:bg-[#009c3b]/90 text-white">
-              {modo === "login" ? "Entrar" : "Criar Conta"}
+            <Button type="submit" className="w-full bg-[#009c3b] hover:bg-[#009c3b]/90 text-white" disabled={carregando}>
+              {carregando ? (modo === "login" ? "Entrando..." : "Cadastrando...") : (modo === "login" ? "Entrar" : "Criar Conta")}
             </Button>
           </form>
 
