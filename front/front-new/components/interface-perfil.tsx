@@ -10,14 +10,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, MapPin, Calendar, BookOpen, Heart, Users, Edit, Camera, Settings, Shield } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export function InterfacePerfil() {
+  const { usuario } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState("perfil")
   const [estaEditando, setEstaEditando] = useState(false)
 
   const [dadosPerfil, setDadosPerfil] = useState({
-    nome: "João Silva",
-    email: "joao@exemplo.com",
+    nome: usuario?.nome || "",
+    email: usuario?.email || "",
     biografia:
       "Apaixonado por literatura cearense e histórias que conectam tradição e modernidade. Leitor voraz e escritor nas horas vagas.",
     cidade: "Fortaleza",
