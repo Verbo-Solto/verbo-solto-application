@@ -264,21 +264,33 @@ export function InterfaceBiblioteca() {
           <Button
             variant={abaAtiva === "lendo" ? "default" : "ghost"}
             onClick={() => setAbaAtiva("lendo")}
-            className={abaAtiva === "lendo" ? "bg-white shadow-sm" : ""}
+            className={
+              abaAtiva === "lendo"
+                ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
+            }
           >
             Lendo ({listaLeitura.length})
           </Button>
           <Button
             variant={abaAtiva === "finalizadas" ? "default" : "ghost"}
             onClick={() => setAbaAtiva("finalizadas")}
-            className={abaAtiva === "finalizadas" ? "bg-white shadow-sm" : ""}
+            className={
+              abaAtiva === "finalizadas"
+                ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
+            }
           >
             Finalizadas ({livrosFinalizados.length})
           </Button>
           <Button
             variant={abaAtiva === "favoritas" ? "default" : "ghost"}
             onClick={() => setAbaAtiva("favoritas")}
-            className={abaAtiva === "favoritas" ? "bg-white shadow-sm" : ""}
+            className={
+              abaAtiva === "favoritas"
+                ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
+            }
           >
             Favoritas ({livrosFavoritos.length})
           </Button>
