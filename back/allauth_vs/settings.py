@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'profile_vs',
+    'obras_vs',  # Certifique-se de que obras_vs está aqui!
 ]
 
 SITE_ID = 1
@@ -137,6 +139,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
 }
 
-CORS_ALLOW_ALL_ORIGINS = True  # Para desenvolvimento, ajuste para produção
+CORS_ALLOW_ALL_ORIGINS = True  
