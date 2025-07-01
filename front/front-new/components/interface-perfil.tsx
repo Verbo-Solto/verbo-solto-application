@@ -162,10 +162,15 @@ export function InterfacePerfil() {
         <div className="lg:col-span-2">
           {/* Abas de Navegação */}
           <div className="flex gap-1 mb-8 bg-[#f4f4f4] p-1 rounded-lg w-fit">
+            {/* Corrige o estilo dos botões de abas para todas as telas */}
             <Button
               variant={abaAtiva === "perfil" ? "default" : "ghost"}
               onClick={() => setAbaAtiva("perfil")}
-              className={abaAtiva === "perfil" ? "bg-white shadow-sm" : ""}
+              className={
+                abaAtiva === "perfil"
+                  ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                  : "hover:bg-[#009c3b]/10 border border-transparent"
+              }
             >
               <User className="w-4 h-4 mr-2" />
               Perfil
@@ -173,7 +178,11 @@ export function InterfacePerfil() {
             <Button
               variant={abaAtiva === "configuracoes" ? "default" : "ghost"}
               onClick={() => setAbaAtiva("configuracoes")}
-              className={abaAtiva === "configuracoes" ? "bg-white shadow-sm" : ""}
+              className={
+                abaAtiva === "configuracoes"
+                  ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                  : "hover:bg-[#009c3b]/10 border border-transparent"
+              }
             >
               <Settings className="w-4 h-4 mr-2" />
               Configurações
@@ -181,7 +190,11 @@ export function InterfacePerfil() {
             <Button
               variant={abaAtiva === "privacidade" ? "default" : "ghost"}
               onClick={() => setAbaAtiva("privacidade")}
-              className={abaAtiva === "privacidade" ? "bg-white shadow-sm" : ""}
+              className={
+                abaAtiva === "privacidade"
+                  ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                  : "hover:bg-[#009c3b]/10 border border-transparent"
+              }
             >
               <Shield className="w-4 h-4 mr-2" />
               Privacidade
