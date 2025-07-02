@@ -37,6 +37,10 @@ class Obra(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     colecao = models.ForeignKey(Colecao, on_delete=models.SET_NULL, null=True, blank=True, related_name="obras")
+    resumo = models.CharField(max_length=300, blank=True)  # Novo campo
+    cidade = models.CharField(max_length=100, blank=True)  # Novo campo
+    # capa = models.ImageField(upload_to="capas_obras/", blank=True, null=True)  # Remova ou comente esta linha
+    capa = models.BinaryField(blank=True, null=True)  # Salva a imagem da capa no banco de dados
 
     class Meta:
         ordering = ['-publicada_em', '-criado_em']
@@ -55,10 +59,12 @@ class Obra(models.Model):
     def __str__(self):
         return f"{self.titulo} ({self.autor.username})"
 
-# Para MVP, capítulos podem ser ignorados. No futuro:
-# class Capitulo(models.Model):
-#     obra = models.ForeignKey(Obra, on_delete=models.CASCADE, related_name="capitulos")
-#     titulo = models.CharField(max_length=120)
-#     conteudo = models.TextField(max_length=20000)
-#     ordem = models.PositiveIntegerField()
-#     criado_em = models.DateTimeField(auto_now_add=True)
+class Capitulo(models.Model):
+    colecao = models.ForeignKey(Colecao, on_delete=models.CASCADE, related_name="capitulos")
+    titulo = models.CharField(max_length=120)
+    conteudo = models.TextField(max_length=20000)
+    ordem = models.PositiveIntegerField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.titulo} (Coleção: {self.colecao.nome})"
