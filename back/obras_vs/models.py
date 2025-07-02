@@ -39,7 +39,8 @@ class Obra(models.Model):
     colecao = models.ForeignKey(Colecao, on_delete=models.SET_NULL, null=True, blank=True, related_name="obras")
     resumo = models.CharField(max_length=300, blank=True)  # Novo campo
     cidade = models.CharField(max_length=100, blank=True)  # Novo campo
-    capa = models.ImageField(upload_to="capas_obras/", blank=True, null=True)  # Novo campo opcional
+    # capa = models.ImageField(upload_to="capas_obras/", blank=True, null=True)  # Remova ou comente esta linha
+    capa = models.BinaryField(blank=True, null=True)  # Salva a imagem da capa no banco de dados
 
     class Meta:
         ordering = ['-publicada_em', '-criado_em']

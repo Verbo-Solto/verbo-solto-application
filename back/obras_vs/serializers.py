@@ -24,7 +24,7 @@ class ObraSerializer(serializers.ModelSerializer):
     paginas = serializers.SerializerMethodField(read_only=True)
     resumo = serializers.CharField(required=False, allow_blank=True, max_length=300)
     cidade = serializers.CharField(required=False, allow_blank=True, max_length=100)
-    capa = serializers.ImageField(required=False, allow_null=True)
+    capa = serializers.SerializerMethodField(read_only=True)
     capa_base64 = serializers.CharField(write_only=True, required=False, allow_blank=True)
     status = serializers.ChoiceField(choices=[('rascunho', 'Rascunho'), ('publicada', 'Publicada')], default='rascunho')
 
@@ -67,13 +67,17 @@ class ObraSerializer(serializers.ModelSerializer):
 
         return data
 
+    def get_capa(self, obj):
+        if obj.capa:
+            import base64
+            return base64.b64encode(obj.capa).decode("utf-8")
+        return None
+
     def create(self, validated_data):
-        # Suporte a capa em base64
         capa_base64 = validated_data.pop('capa_base64', None)
         if capa_base64:
             import base64
-            from django.core.files.base import ContentFile
-            validated_data['capa'] = ContentFile(base64.b64decode(capa_base64), name="capa.png")
+            validated_data['capa'] = base64.b64decode(capa_base64)
         request = self.context.get('request')
         if request and hasattr(request, "user") and request.user.is_authenticated:
             validated_data['autor'] = request.user
@@ -88,12 +92,10 @@ class ObraSerializer(serializers.ModelSerializer):
         return obra
 
     def update(self, instance, validated_data):
-        # Suporte a capa em base64 na atualização
         capa_base64 = validated_data.pop('capa_base64', None)
         if capa_base64:
             import base64
-            from django.core.files.base import ContentFile
-            instance.capa = ContentFile(base64.b64decode(capa_base64), name="capa.png")
+            instance.capa = base64.b64decode(capa_base64)
             instance.save()
         tags_data = validated_data.pop('tags', None)
         if tags_data is not None:
@@ -102,8 +104,13 @@ class ObraSerializer(serializers.ModelSerializer):
                 tag_obj, _ = Tag.objects.get_or_create(nome=tag['nome'] if isinstance(tag, dict) else tag)
                 instance.tags.add(tag_obj)
 
-        # Validação de tamanho de conteúdo se status for 'publicada'
         status = validated_data.get('status', instance.status)
+        conteudo = validated_data.get('conteudo', instance.conteudo)
+        if status == 'publicada':
+            if len(conteudo) < 1500 or len(conteudo) > 3000:
+                raise serializers.ValidationError("O texto deve ter entre 1.500 e 3.000 caracteres (com espaços).")
+
+        return super().update(instance, validated_data)
         conteudo = validated_data.get('conteudo', instance.conteudo)
         if status == 'publicada':
             if len(conteudo) < 1500 or len(conteudo) > 3000:
