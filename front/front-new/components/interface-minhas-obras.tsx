@@ -153,21 +153,33 @@ export function InterfaceMinhasObras() {
         <Button
           variant={abaAtiva === "publicadas" ? "default" : "ghost"}
           onClick={() => setAbaAtiva("publicadas")}
-          className={abaAtiva === "publicadas" ? "bg-white shadow-sm" : ""}
+          className={
+            abaAtiva === "publicadas"
+              ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+              : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
+          }
         >
           Publicadas ({obrasPublicadas.length})
         </Button>
         <Button
           variant={abaAtiva === "rascunhos" ? "default" : "ghost"}
           onClick={() => setAbaAtiva("rascunhos")}
-          className={abaAtiva === "rascunhos" ? "bg-white shadow-sm" : ""}
+          className={
+            abaAtiva === "rascunhos"
+              ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+              : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
+          }
         >
           Rascunhos ({rascunhos.length})
         </Button>
         <Button
           variant={abaAtiva === "estatisticas" ? "default" : "ghost"}
           onClick={() => setAbaAtiva("estatisticas")}
-          className={abaAtiva === "estatisticas" ? "bg-white shadow-sm" : ""}
+          className={
+            abaAtiva === "estatisticas"
+              ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+              : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
+          }
         >
           Estatísticas
         </Button>

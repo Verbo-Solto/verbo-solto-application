@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, AwaitedReactNode, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,37 +10,131 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, MapPin, Calendar, BookOpen, Heart, Users, Edit, Camera, Settings, Shield } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+import axios from "axios"
 
 export function InterfacePerfil() {
+  const { usuario } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState("perfil")
   const [estaEditando, setEstaEditando] = useState(false)
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null)
+  const [uploadingImg, setUploadingImg] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [sucesso, setSucesso] = useState<string | null>(null)
 
   const [dadosPerfil, setDadosPerfil] = useState({
-    nome: "João Silva",
-    email: "joao@exemplo.com",
-    biografia:
-      "Apaixonado por literatura cearense e histórias que conectam tradição e modernidade. Leitor voraz e escritor nas horas vagas.",
-    cidade: "Fortaleza",
-    dataIngresso: "Janeiro 2024",
+    nome: "",
+    email: "",
+    biografia: "",
+    cidade: "",
+    dataIngresso: "",
     website: "",
     generosPreferidos: ["Ficção Científica", "Drama", "Romance"],
+    imagem: "",
   })
 
-  const estatisticas = {
-    obrasPublicadas: 3,
-    obrasLidas: 24,
-    seguidores: 156,
-    seguindo: 89,
-    totalCurtidas: 892,
-    avaliacaoMedia: 4.6,
+  // Carregar perfil do backend ao abrir a tela
+  useEffect(() => {
+    const fetchPerfil = async () => {
+      setErro(null)
+      const token = localStorage.getItem("access")
+      if (!token) {
+        setErro("Você precisa estar logado para acessar seu perfil.")
+        return
+      }
+      try {
+        const response = await axios.get("http://localhost:8000/api/profiles/me/", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const perfil = response.data
+        setDadosPerfil({
+          nome: perfil.user.first_name || perfil.user.username,
+          email: perfil.user.email,
+          biografia: perfil.bio || "",
+          cidade: perfil.cidade || "",
+          dataIngresso: perfil.user.date_joined
+            ? new Date(perfil.user.date_joined).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+            : "",
+          website: "",
+          generosPreferidos: perfil.generos_preferidos || ["Ficção Científica", "Drama", "Romance"],
+          imagem: perfil.imagem || "",
+        })
+      } catch (err) {
+        setErro("Erro ao carregar perfil. Verifique sua autenticação.")
+      }
+    }
+    fetchPerfil()
+  }, [])
+
+  // Salvar edição do perfil (nome, email, bio, cidade, generos)
+  const handleSalvar = async () => {
+    setSalvando(true)
+    setErro(null)
+    setSucesso(null)
+    const token = localStorage.getItem("access")
+    if (!token) {
+      setErro("Você precisa estar logado para editar seu perfil.")
+      setSalvando(false)
+      return
+    }
+    try {
+      const payload: any = {
+        bio: dadosPerfil.biografia,
+        cidade: dadosPerfil.cidade,
+        user: {
+          first_name: dadosPerfil.nome,
+          email: dadosPerfil.email,
+        },
+        // Se quiser salvar generos no backend, inclua aqui:
+        // generos_preferidos: dadosPerfil.generosPreferidos,
+      }
+      await axios.patch("http://localhost:8000/api/profiles/me/", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setSucesso("Perfil atualizado com sucesso!")
+      setEstaEditando(false)
+    } catch (err) {
+      setErro("Erro ao salvar perfil.")
+    } finally {
+      setSalvando(false)
+    }
   }
 
-  const atividadeRecente = [
-    { tipo: "publicou", titulo: "Sertão Digital", data: "2 dias atrás" },
-    { tipo: "terminou", titulo: "A Rendeira de Aquiraz", data: "1 semana atrás" },
-    { tipo: "curtiu", titulo: "Memórias do Açude", data: "2 semanas atrás" },
-    { tipo: "seguiu", usuario: "Maria Santos", data: "3 semanas atrás" },
-  ]
+  // Upload da imagem (base64)
+  const handleImagemChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingImg(true)
+    setErro(null)
+    setSucesso(null)
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1]
+      setImagemPreview("data:image/png;base64," + base64)
+      const token = localStorage.getItem("access")
+      if (!token) {
+        setUploadingImg(false)
+        return
+      }
+      try {
+        await axios.patch(
+          "http://localhost:8000/api/profiles/me/",
+          { imagem_base64: base64 },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        setDadosPerfil((prev) => ({
+          ...prev,
+          imagem: base64,
+        }))
+        setSucesso("Imagem atualizada com sucesso!")
+      } catch (err) {
+        setErro("Erro ao atualizar imagem.")
+      }
+      setUploadingImg(false)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const cidades = [
     "Fortaleza",
@@ -68,20 +162,42 @@ export function InterfacePerfil() {
     "Folclore",
   ]
 
-  const handleSalvar = () => {
-    setEstaEditando(false)
-    // Implementar lógica de salvamento
-    console.log("Perfil salvo:", dadosPerfil)
-  }
+  // Mock de atividades recentes (substitua por fetch real se necessário)
+  const atividadeRecente = [
+    {
+      tipo: "publicou",
+      titulo: "O Sol e a Lua",
+      usuario: "",
+      data: "há 2 dias",
+    },
+    {
+      tipo: "terminou",
+      titulo: "A Jornada do Herói",
+      usuario: "",
+      data: "há 5 dias",
+    },
+    {
+      tipo: "curtiu",
+      titulo: "Versos Urbanos",
+      usuario: "",
+      data: "há 1 semana",
+    },
+    {
+      tipo: "seguiu",
+      titulo: "",
+      usuario: "Maria Silva",
+      data: "há 2 semanas",
+    },
+  ]
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Cabeçalho */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#131313] mb-2">Meu Perfil</h1>
         <p className="text-[#6e6e6e]">Gerencie suas informações pessoais e preferências</p>
       </div>
-
+      {erro && <div className="text-center text-red-600 mb-4">{erro}</div>}
+      {sucesso && <div className="text-center text-green-600 mb-4">{sucesso}</div>}
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Card do Perfil */}
         <div className="lg:col-span-1">
@@ -89,12 +205,33 @@ export function InterfacePerfil() {
             <div className="text-center mb-6">
               <div className="relative inline-block">
                 <Avatar className="w-24 h-24 mx-auto mb-4">
-                  <AvatarImage src="/placeholder.svg?height=96&width=96" alt="@joaosilva" />
-                  <AvatarFallback className="text-2xl">JS</AvatarFallback>
+                  <AvatarImage
+                    src={
+                      imagemPreview
+                        ? imagemPreview
+                        : dadosPerfil.imagem
+                        ? `data:image/png;base64,${dadosPerfil.imagem}`
+                        : "/placeholder.svg?height=96&width=96"
+                    }
+                    alt={dadosPerfil.nome}
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {dadosPerfil.nome
+                      ? dadosPerfil.nome.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                      : "US"}
+                  </AvatarFallback>
                 </Avatar>
-                <Button variant="outline" size="icon" className="absolute bottom-0 right-0 rounded-full w-8 h-8">
+                {/* Botão de upload de imagem */}
+                <label className="absolute bottom-0 right-0 rounded-full w-8 h-8 bg-white border border-gray-300 flex items-center justify-center cursor-pointer">
                   <Camera className="w-4 h-4" />
-                </Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImagemChange}
+                    disabled={uploadingImg}
+                  />
+                </label>
               </div>
               <h3 className="text-xl font-bold text-[#131313] mb-1">{dadosPerfil.nome}</h3>
               <p className="text-[#6e6e6e] text-sm mb-2">{dadosPerfil.email}</p>
@@ -133,7 +270,7 @@ export function InterfacePerfil() {
           <Card className="p-6 mt-6">
             <h4 className="font-semibold text-[#131313] mb-4">Atividade Recente</h4>
             <div className="space-y-3">
-              {atividadeRecente.map((atividade, index) => (
+              {atividadeRecente.map((atividade: { tipo: string; titulo: any; usuario: any; data: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined }, index: Key | null | undefined) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="w-8 h-8 bg-[#009c3b]/10 rounded-full flex items-center justify-center flex-shrink-0">
                     {atividade.tipo === "publicou" && <BookOpen className="w-4 h-4 text-[#009c3b]" />}
@@ -160,10 +297,15 @@ export function InterfacePerfil() {
         <div className="lg:col-span-2">
           {/* Abas de Navegação */}
           <div className="flex gap-1 mb-8 bg-[#f4f4f4] p-1 rounded-lg w-fit">
+            {/* Corrige o estilo dos botões de abas para todas as telas */}
             <Button
               variant={abaAtiva === "perfil" ? "default" : "ghost"}
               onClick={() => setAbaAtiva("perfil")}
-              className={abaAtiva === "perfil" ? "bg-white shadow-sm" : ""}
+              className={
+                abaAtiva === "perfil"
+                  ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                  : "hover:bg-[#009c3b]/10 border border-transparent"
+              }
             >
               <User className="w-4 h-4 mr-2" />
               Perfil
@@ -171,7 +313,11 @@ export function InterfacePerfil() {
             <Button
               variant={abaAtiva === "configuracoes" ? "default" : "ghost"}
               onClick={() => setAbaAtiva("configuracoes")}
-              className={abaAtiva === "configuracoes" ? "bg-white shadow-sm" : ""}
+              className={
+                abaAtiva === "configuracoes"
+                  ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                  : "hover:bg-[#009c3b]/10 border border-transparent"
+              }
             >
               <Settings className="w-4 h-4 mr-2" />
               Configurações
@@ -179,7 +325,11 @@ export function InterfacePerfil() {
             <Button
               variant={abaAtiva === "privacidade" ? "default" : "ghost"}
               onClick={() => setAbaAtiva("privacidade")}
-              className={abaAtiva === "privacidade" ? "bg-white shadow-sm" : ""}
+              className={
+                abaAtiva === "privacidade"
+                  ? "bg-[#009c3b] text-white shadow-sm hover:bg-[#009c3b]/90 border border-[#009c3b]"
+                  : "hover:bg-[#009c3b]/10 border border-transparent"
+              }
             >
               <Shield className="w-4 h-4 mr-2" />
               Privacidade
@@ -311,8 +461,8 @@ export function InterfacePerfil() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Button onClick={handleSalvar} className="bg-[#009c3b] hover:bg-[#009c3b]/90">
-                      Salvar Alterações
+                    <Button onClick={handleSalvar} className="bg-[#009c3b] hover:bg-[#009c3b]/90" disabled={salvando}>
+                      {salvando ? "Salvando..." : "Salvar Alterações"}
                     </Button>
                     <Button variant="outline" onClick={() => setEstaEditando(false)}>
                       Cancelar
