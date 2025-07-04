@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { EditorTiptap } from "./editor-tiptap"
 import { Save, Eye, Send, Plus, X, BookOpen, FileText, Clock, Tag, MapPin, User } from "lucide-react"
 import axios from "axios"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 export function InterfaceEscrita() {
@@ -34,6 +34,8 @@ export function InterfaceEscrita() {
   const [capa, setCapa] = useState<File | null>(null)
   const [statusObra, setStatusObra] = useState<"publicada" | "rascunho">("publicada")
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const obraId = searchParams.get("editar") || searchParams.get("rascunho") || null
 
   const generos = [
     "Romance",
@@ -88,15 +90,25 @@ export function InterfaceEscrita() {
 
   // Atualiza páginas ao digitar
   useEffect(() => {
-    // Divide o texto em páginas de até 300 palavras cada
-    const palavras = conteudo.split(/\s+/).filter(Boolean)
-    const novasPaginas = []
-    for (let i = 0; i < palavras.length; i += 300) {
-      novasPaginas.push(palavras.slice(i, i + 300).join(" "))
+    // NÃO use split(/\s+/) para textos HTML vindos do editor tiptap!
+    // Apenas separe por páginas se for texto puro.
+    // Se for HTML (ex: <p>...</p><p>...</p>), mantenha o conteúdo como está.
+    if (conteudo.startsWith("<p>")) {
+      // Conteúdo vindo do editor tiptap (HTML): não paginar, apenas 1 página
+      setPaginas([conteudo])
+      setPaginaAtual(0)
+    } else {
+      // Texto puro: paginar normalmente
+      const palavras = conteudo.split(/\s+/).filter(Boolean)
+      const novasPaginas = []
+      for (let i = 0; i < palavras.length; i += 300) {
+        novasPaginas.push(palavras.slice(i, i + 300).join(" "))
+      }
+      if (novasPaginas.length === 0) novasPaginas.push("")
+      setPaginas(novasPaginas)
+      if (paginaAtual >= novasPaginas.length) setPaginaAtual(novasPaginas.length - 1)
     }
-    if (novasPaginas.length === 0) novasPaginas.push("")
-    setPaginas(novasPaginas)
-    if (paginaAtual >= novasPaginas.length) setPaginaAtual(novasPaginas.length - 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conteudo])
 
   // Atualiza o conteúdo ao editar uma página
@@ -138,7 +150,57 @@ export function InterfaceEscrita() {
     }
   }
 
-  // Salvar rascunho
+  // Carregar dados da obra para edição
+  useEffect(() => {
+    if (!obraId) return
+    setErro(null)
+    setSalvandoAutomatico(true)
+    const token = localStorage.getItem("access")
+    if (!token) {
+      setErro("Você precisa estar logado para editar uma obra.")
+      setSalvandoAutomatico(false)
+      return
+    }
+    axios
+      .get(`http://localhost:8000/api/obras/${obraId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((resp) => {
+        const obra = resp.data
+        setTitulo(obra.titulo || "")
+        setResumo(obra.resumo || "")
+        setGenero(obra.genero || "")
+        setCidade(obra.cidade || "")
+        setTags(Array.isArray(obra.tags) ? obra.tags.map((t: any) => (typeof t === "string" ? t : t.nome)) : [])
+        setConteudo(obra.conteudo || "")
+        setStatusObra(obra.status || "rascunho")
+        setColecaoSelecionada(obra.colecao ? String(obra.colecao) : "0")
+        // Capa preview
+        if (obra.capa) {
+          setCapaBase64(obra.capa)
+        }
+      })
+      .catch(() => setErro("Erro ao carregar obra para edição."))
+      .finally(() => setSalvandoAutomatico(false))
+  }, [obraId])
+
+  // Ao carregar o conteúdo para edição, atualiza as páginas
+  useEffect(() => {
+    if (obraId && conteudo) {
+      // Divide o texto em páginas de até 300 palavras cada
+      const palavras = conteudo.split(/\s+/).filter(Boolean)
+      const novasPaginas = []
+      for (let i = 0; i < palavras.length; i += 300) {
+        novasPaginas.push(palavras.slice(i, i + 300).join(" "))
+      }
+      if (novasPaginas.length === 0) novasPaginas.push("")
+      setPaginas(novasPaginas)
+      setPaginaAtual(0)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [obraId, conteudo])
+
+  // Salvar rascunho (criação ou edição)
   const salvarRascunho = async () => {
     setErro(null)
     setSucesso(null)
@@ -162,12 +224,23 @@ export function InterfaceEscrita() {
       if (colecaoSelecionada !== "0") payload.colecao = colecaoSelecionada
       if (capaBase64) payload.capa_base64 = capaBase64
 
-      await axios.post("http://localhost:8000/api/obras/", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      setSucesso("Rascunho salvo com sucesso!")
+      if (obraId) {
+        // Edição de obra existente
+        await axios.patch(`http://localhost:8000/api/obras/${obraId}/`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setSucesso("Rascunho atualizado com sucesso!")
+      } else {
+        // Criação de nova obra
+        await axios.post("http://localhost:8000/api/obras/", payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setSucesso("Rascunho salvo com sucesso!")
+      }
     } catch (err: any) {
       setErro("Erro ao salvar rascunho.")
     }
@@ -226,19 +299,31 @@ export function InterfaceEscrita() {
         conteudo: paginas.join(" ").replace(/\s+/g, " ").trim(),
         resumo,
         cidade,
-        status: statusObra,
+        status: "publicada",
         tags,
       }
       if (colecaoSelecionada !== "0") payload.colecao = colecaoSelecionada
       if (capaBase64) payload.capa_base64 = capaBase64
 
-      const resp = await axios.post("http://localhost:8000/api/obras/", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      setSucesso("Obra salva com sucesso!")
-      router.push(`/obra/${resp.data.id}`)
+      if (obraId) {
+        // Edição de obra existente
+        const resp = await axios.patch(`http://localhost:8000/api/obras/${obraId}/`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setSucesso("Obra atualizada com sucesso!")
+        router.push(`/obra/${resp.data.id || obraId}`)
+      } else {
+        // Criação de nova obra
+        const resp = await axios.post("http://localhost:8000/api/obras/", payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setSucesso("Obra publicada com sucesso!")
+        router.push(`/obra/${resp.data.id}`)
+      }
     } catch (err: any) {
       if (err.response?.data?.detail) setErro(err.response.data.detail)
       else if (err.response?.data?.non_field_errors) setErro(err.response.data.non_field_errors.join(" "))
@@ -368,49 +453,60 @@ export function InterfaceEscrita() {
                 <Card className="border-none shadow-sm bg-white">
                   <CardContent className="p-6">
                     <Label className="text-base font-medium text-[#131313] mb-3 block">
-                      Conteúdo (página {paginaAtual + 1} de {paginas.length})
+                      Conteúdo
                     </Label>
-                    <div className="flex gap-2 mb-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPaginaAtual(Math.max(0, paginaAtual - 1))}
-                        disabled={paginaAtual === 0}
-                      >
-                        {"← Página anterior"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPaginaAtual(Math.min(paginas.length - 1, paginaAtual + 1))}
-                        disabled={paginaAtual === paginas.length - 1}
-                      >
-                        {"Próxima página →"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={adicionarPagina}
-                        disabled={paginas.length >= 10}
-                      >
-                        + Nova Página
-                      </Button>
-                      <span className="ml-auto text-xs text-[#6e6e6e]">
-                        {paginas[paginaAtual]?.split(/\s+/).filter(Boolean).length || 0}/300 palavras
-                      </span>
-                    </div>
-                    <Textarea
-                      value={paginas[paginaAtual]}
-                      onChange={e => handlePaginaChange(e.target.value, paginaAtual)}
-                      placeholder="Digite o texto desta página..."
-                      className="min-h-[200px] border-[#e5e7eb] focus:border-[#009c3b] focus:ring-[#009c3b]"
-                      maxLength={3000}
-                    />
-                    <div className="flex justify-end text-xs text-[#6e6e6e] mt-1">
-                      {paginas[paginaAtual]?.length || 0}/3000 caracteres
-                    </div>
-                    {erroPagina && (
-                      <div className="mt-2 text-red-600 text-sm">{erroPagina}</div>
+                    {/* Se for HTML do tiptap, renderize o editor tiptap */}
+                    {paginas.length === 1 && paginas[0].startsWith("<p>") ? (
+                      <EditorTiptap
+                        content={paginas[0]}
+                        onChange={setConteudo}
+                        placeholder="Digite o texto da sua obra..."
+                      />
+                    ) : (
+                      <>
+                        <div className="flex gap-2 mb-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPaginaAtual(Math.max(0, paginaAtual - 1))}
+                            disabled={paginaAtual === 0}
+                          >
+                            {"← Página anterior"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPaginaAtual(Math.min(paginas.length - 1, paginaAtual + 1))}
+                            disabled={paginaAtual === paginas.length - 1}
+                          >
+                            {"Próxima página →"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={adicionarPagina}
+                            disabled={paginas.length >= 10}
+                          >
+                            + Nova Página
+                          </Button>
+                          <span className="ml-auto text-xs text-[#6e6e6e]">
+                            {paginas[paginaAtual]?.split(/\s+/).filter(Boolean).length || 0}/300 palavras
+                          </span>
+                        </div>
+                        <Textarea
+                          value={paginas[paginaAtual]}
+                          onChange={e => handlePaginaChange(e.target.value, paginaAtual)}
+                          placeholder="Digite o texto desta página... Use Enter para quebrar linhas normalmente."
+                          className="min-h-[200px] border-[#e5e7eb] focus:border-[#009c3b] focus:ring-[#009c3b] font-mono whitespace-pre-line"
+                          maxLength={3000}
+                        />
+                        <div className="flex justify-end text-xs text-[#6e6e6e] mt-1">
+                          {paginas[paginaAtual]?.length || 0}/3000 caracteres
+                        </div>
+                        {erroPagina && (
+                          <div className="mt-2 text-red-600 text-sm">{erroPagina}</div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -423,6 +519,7 @@ export function InterfaceEscrita() {
                       {paginas.map((pagina, idx) => (
                         <div key={idx} className="mb-8">
                           <div className="text-xs text-[#009c3b] mb-2">Página {idx + 1}</div>
+                          {/* Mostra as quebras de linha reais do texto */}
                           <div className="whitespace-pre-line">{pagina}</div>
                         </div>
                       ))}
@@ -677,4 +774,3 @@ export function InterfaceEscrita() {
     </div>
   )
 }
-

@@ -18,20 +18,36 @@ import {
   ChevronRight,
   Settings,
   Users,
+  MapPin,
 } from "lucide-react"
+import axios from "axios"
 
 interface LeitorObraProps {
-  obra: any
+  obraId: string
 }
 
-export function LeitorObra({ obra }: LeitorObraProps) {
+export function LeitorObra({ obraId }: LeitorObraProps) {
+  const [obra, setObra] = useState<any>(null)
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [curtiu, setCurtiu] = useState(false)
   const [salvou, setSalvou] = useState(false)
   const [tamanhoFonte, setTamanhoFonte] = useState(16)
-  const [progressoLeitura, setProgressoLeitura] = useState(35)
+  const [progressoLeitura, setProgressoLeitura] = useState(0)
 
+  // Busca a obra real do backend
   useEffect(() => {
-    if (typeof window === "undefined") return
+    setCarregando(true)
+    setErro(null)
+    axios
+      .get(`http://localhost:8000/api/obras/${obraId}/`)
+      .then((resp) => setObra(resp.data))
+      .catch(() => setErro("Obra não encontrada."))
+      .finally(() => setCarregando(false))
+  }, [obraId])
+
+  // Rastreamento do progresso de leitura
+  useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY
       const docHeight = document.documentElement.scrollHeight - window.innerHeight
@@ -42,11 +58,22 @@ export function LeitorObra({ obra }: LeitorObraProps) {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  if (!obra) return null
+  if (carregando) {
+    return <div className="text-center text-[#009c3b] my-12">Carregando obra...</div>
+  }
+  if (erro || !obra) {
+    return <div className="text-center text-red-600 my-12">{erro || "Obra não encontrada."}</div>
+  }
 
-  const tags = obra.tags?.map((t: any) => t.nome) || []
-  const tempoLeitura = Math.ceil((obra.conteudo?.split(/\s+/).length || 0) / 200)
-  const autor = obra.autor || "Autor desconhecido"
+  // Calcula tempo de leitura estimado (200 palavras por min)
+  const tempoEstimadoLeitura = obra.conteudo
+    ? Math.ceil(obra.conteudo.split(/\s+/).filter(Boolean).length / 200)
+    : 1
+
+  // Mostra tags como string ou objeto
+  const tags = Array.isArray(obra.tags)
+    ? obra.tags.map((t: any) => (typeof t === "string" ? t : t.nome))
+    : []
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -60,10 +87,18 @@ export function LeitorObra({ obra }: LeitorObraProps) {
               <span>{obra.cidade}</span>
             </>
           )}
-          <span>•</span>
-          <span>
-            {obra.publicada_em ? new Date(obra.publicada_em).toLocaleDateString("pt-BR") : ""}
-          </span>
+          {obra.publicada_em && (
+            <>
+              <span>•</span>
+              <span>
+                {new Date(obra.publicada_em).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+              </span>
+            </>
+          )}
         </div>
 
         <h1 className="text-4xl font-bold text-[#131313] mb-4">{obra.titulo}</h1>
@@ -80,10 +115,10 @@ export function LeitorObra({ obra }: LeitorObraProps) {
         <div className="flex items-center justify-between mb-6 p-4 bg-[#f4f4f4] rounded-lg">
           <div className="flex items-center gap-4">
             <Avatar className="w-12 h-12">
-              <AvatarImage src="/placeholder.svg?height=40&width=40" />
+              <AvatarImage src={"/placeholder.svg?height=40&width=40"} />
               <AvatarFallback>
-                {typeof autor === "string"
-                  ? autor
+                {obra.autor
+                  ? obra.autor
                       .split(" ")
                       .map((n: string) => n[0])
                       .join("")
@@ -91,7 +126,16 @@ export function LeitorObra({ obra }: LeitorObraProps) {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold text-[#131313]">{autor}</h3>
+              <h3 className="font-semibold text-[#131313]">{obra.autor}</h3>
+              {/* Não temos bio do autor no modelo padrão */}
+              <div className="flex items-center gap-4 text-xs text-[#6e6e6e] mt-1">
+                {obra.seguidores !== undefined && (
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {obra.seguidores} seguidores
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <Button variant="outline" className="border-[#009c3b] text-[#009c3b] hover:bg-[#009c3b] hover:text-white">
@@ -104,11 +148,11 @@ export function LeitorObra({ obra }: LeitorObraProps) {
           <div className="flex items-center gap-6 text-sm text-[#6e6e6e]">
             <div className="flex items-center gap-1">
               <Eye className="w-4 h-4" />
-              {obra.visualizacoes || 0} visualizações
+              {obra.visualizacoes} visualizações
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              {tempoLeitura} min de leitura
+              {tempoEstimadoLeitura} min de leitura
             </div>
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 text-yellow-500 fill-current" />
@@ -125,12 +169,12 @@ export function LeitorObra({ obra }: LeitorObraProps) {
             >
               <Heart className={`w-5 h-5 ${curtiu ? "fill-current" : ""}`} />
             </Button>
-            <span className="text-sm text-[#6e6e6e]">{(obra.curtidas || 0) + (curtiu ? 1 : 0)}</span>
+            <span className="text-sm text-[#6e6e6e]">{obra.curtidas + (curtiu ? 1 : 0)}</span>
 
             <Button variant="ghost" size="icon" className="text-[#6e6e6e]">
               <MessageCircle className="w-5 h-5" />
             </Button>
-            <span className="text-sm text-[#6e6e6e]">{obra.comentarios || 0}</span>
+            <span className="text-sm text-[#6e6e6e]">{obra.comentarios}</span>
 
             <Button
               variant="ghost"
@@ -179,7 +223,7 @@ export function LeitorObra({ obra }: LeitorObraProps) {
               A+
             </Button>
           </div>
-          <div className="text-sm text-[#6e6e6e]">~{tempoLeitura} min restantes</div>
+          <div className="text-sm text-[#6e6e6e]">~{tempoEstimadoLeitura} min restantes</div>
           <Button variant="ghost" size="icon">
             <Settings className="w-5 h-5" />
           </Button>
@@ -192,11 +236,21 @@ export function LeitorObra({ obra }: LeitorObraProps) {
           className="prose prose-lg max-w-none text-[#131313] leading-relaxed"
           style={{ fontSize: `${tamanhoFonte}px` }}
         >
-          {obra.conteudo?.split("\n\n").map((paragrafo: string, index: number) => (
-            <p key={index} className="mb-6">
-              {paragrafo.trim()}
-            </p>
-          ))}
+          {/* Se for HTML (do tiptap), renderiza como HTML seguro */}
+          {obra.conteudo && obra.conteudo.trim().startsWith("<p>")
+            ? (
+              <div dangerouslySetInnerHTML={{ __html: obra.conteudo }} />
+            )
+            : (
+              obra.conteudo
+                ? obra.conteudo.split("\n\n").map((paragrafo: string, index: number) => (
+                  <p key={index} className="mb-6">
+                    {paragrafo.trim()}
+                  </p>
+                ))
+                : <p>Sem conteúdo.</p>
+            )
+          }
         </div>
       </Card>
 

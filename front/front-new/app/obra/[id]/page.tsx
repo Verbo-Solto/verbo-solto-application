@@ -37,7 +37,7 @@ export default function PaginaObra({ params }: PaginaObraProps) {
         {erro && <div className="text-center text-red-600">{erro}</div>}
         {obra && (
           <>
-            <LeitorObra obra={obra} />
+            <LeitorObra obraId={params.id} />
             <ComentariosObra obraId={params.id} />
             <ObrasRelacionadas obraId={params.id} />
           </>

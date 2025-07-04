@@ -70,7 +70,14 @@ class ObraSerializer(serializers.ModelSerializer):
     def get_capa(self, obj):
         if obj.capa:
             import base64
-            return base64.b64encode(obj.capa).decode("utf-8")
+            # Sempre retorna base64 se for bytes ou memoryview
+            if isinstance(obj.capa, bytes):
+                return base64.b64encode(obj.capa).decode("utf-8")
+            elif isinstance(obj.capa, memoryview):
+                return base64.b64encode(obj.capa.tobytes()).decode("utf-8")
+            elif isinstance(obj.capa, str):
+                # Caso legado: converte string para bytes antes de base64
+                return base64.b64encode(obj.capa.encode("latin1")).decode("utf-8")
         return None
 
     def create(self, validated_data):
@@ -93,10 +100,16 @@ class ObraSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         capa_base64 = validated_data.pop('capa_base64', None)
-        if capa_base64:
-            import base64
-            instance.capa = base64.b64decode(capa_base64)
-            instance.save()
+        # Desabilita atualização de capa via update
+        if 'capa' in validated_data:
+            validated_data.pop('capa')
+        # Proteção extra: garante que capa nunca será string (mesmo se vier por erro do frontend)
+        if hasattr(instance, 'capa') and isinstance(instance.capa, str):
+            try:
+                instance.capa = instance.capa.encode('latin1')
+            except Exception:
+                instance.capa = None
+        # tags, status, conteudo...
         tags_data = validated_data.pop('tags', None)
         if tags_data is not None:
             instance.tags.clear()
@@ -111,9 +124,4 @@ class ObraSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("O texto deve ter entre 1.500 e 3.000 caracteres (com espaços).")
 
         return super().update(instance, validated_data)
-        conteudo = validated_data.get('conteudo', instance.conteudo)
-        if status == 'publicada':
-            if len(conteudo) < 1500 or len(conteudo) > 3000:
-                raise serializers.ValidationError("O texto deve ter entre 1.500 e 3.000 caracteres (com espaços).")
 
-        return super().update(instance, validated_data)
