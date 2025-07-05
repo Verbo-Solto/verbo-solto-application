@@ -24,16 +24,12 @@ export function EditorTiptap({ content, onChange, placeholder = "Comece a escrev
     ],
     content,
     onUpdate: ({ editor }) => {
-      // Altere para salvar o conteúdo como HTML puro (com <br> e <p>)
       onChange(editor.getHTML())
     },
     editorProps: {
       attributes: {
         class: "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[400px] p-6",
-        spellCheck: "true",
       },
-      // Remova o handleKeyDown customizado para deixar o comportamento padrão do Tiptap (Enter = novo parágrafo, Shift+Enter = <br>)
-      // Isso evita o bug de "voltar para linha anterior" ao digitar após Enter.
     },
   })
 

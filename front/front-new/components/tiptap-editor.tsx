@@ -67,14 +67,11 @@ export function TiptapEditor({
     ],
     content: content,
     onUpdate: ({ editor }) => {
-      // Exemplo de como obter HTML com quebras de linha
-      const html = editor.getHTML();
-      onChange?.(html);
+      onChange(editor.getHTML())
     },
     editorProps: {
       attributes: {
-        class: "prose prose-lg max-w-none focus:outline-none min-h-[400px] p-6 whitespace-pre-wrap",
-        style: "white-space: pre-wrap;",
+        class: "prose prose-lg max-w-none focus:outline-none min-h-[400px] p-6",
       },
     },
   })

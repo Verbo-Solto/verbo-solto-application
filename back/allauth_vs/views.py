@@ -30,7 +30,7 @@ class RegisterAPIView(APIView):
             user.first_name = full_name
             user.save()
 
-        profile = user.profile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.bio = bio
         profile.cidade = cidade
         profile.save()
