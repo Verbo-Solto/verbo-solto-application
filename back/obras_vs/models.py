@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
+from django.utils import timezone
 
 class Tag(models.Model):
     nome = models.CharField(max_length=32, unique=True)
@@ -13,10 +14,12 @@ class Colecao(models.Model):
     autor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="colecoes")
     descricao = models.TextField(blank=True)
     criada_em = models.DateTimeField(auto_now_add=True)
+    titulo = models.CharField(max_length=200, default="Obra sem título")
+    descricao = models.TextField(blank=True, default="")
+    data_criacao = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome
-
 class Obra(models.Model):
     STATUS_CHOICES = [
         ('publicada', 'Publicada'),
@@ -24,8 +27,9 @@ class Obra(models.Model):
     ]
     titulo = models.CharField(max_length=120)
     slug = models.SlugField(max_length=140, unique=True, blank=True)
-    conteudo = models.TextField(max_length=20000)  # Limite de palavras validado no serializer
-    genero = models.CharField(max_length=40)
+    conteudo = models.TextField(blank=True, null=True)  # Permitir que seja nulo
+    paginas = models.JSONField(default=list, blank=True)
+    genero = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='rascunho')
     autor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='obras')
     tags = models.ManyToManyField(Tag, blank=True)

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
+import axios from "axios"
 import {
   Heart,
   MessageCircle,
@@ -18,9 +19,7 @@ import {
   ChevronRight,
   Settings,
   Users,
-  MapPin,
 } from "lucide-react"
-import axios from "axios"
 
 interface LeitorObraProps {
   obraId: string
@@ -33,17 +32,22 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
   const [curtiu, setCurtiu] = useState(false)
   const [salvou, setSalvou] = useState(false)
   const [tamanhoFonte, setTamanhoFonte] = useState(16)
-  const [progressoLeitura, setProgressoLeitura] = useState(0)
+  const [progressoLeitura, setProgressoLeitura] = useState(35)
 
-  // Busca a obra real do backend
+  // Buscar dados da obra da API
   useEffect(() => {
     setCarregando(true)
     setErro(null)
     axios
       .get(`http://localhost:8000/api/obras/${obraId}/`)
-      .then((resp) => setObra(resp.data))
-      .catch(() => setErro("Obra não encontrada."))
-      .finally(() => setCarregando(false))
+      .then((resp) => {
+        setObra(resp.data)
+        setCarregando(false)
+      })
+      .catch(() => {
+        setErro("Obra não encontrada.")
+        setCarregando(false)
+      })
   }, [obraId])
 
   // Rastreamento do progresso de leitura
@@ -54,26 +58,32 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
       const scrollPercent = (scrollTop / docHeight) * 100
       setProgressoLeitura(Math.min(100, Math.max(0, scrollPercent)))
     }
+
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   if (carregando) {
-    return <div className="text-center text-[#009c3b] my-12">Carregando obra...</div>
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <p className="text-[#6e6e6e]">Carregando obra...</p>
+        </div>
+      </div>
+    )
   }
+
   if (erro || !obra) {
-    return <div className="text-center text-red-600 my-12">{erro || "Obra não encontrada."}</div>
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <p className="text-red-500">{erro || "Obra não encontrada."}</p>
+        </div>
+      </div>
+    )
   }
 
-  // Calcula tempo de leitura estimado (200 palavras por min)
-  const tempoEstimadoLeitura = obra.conteudo
-    ? Math.ceil(obra.conteudo.split(/\s+/).filter(Boolean).length / 200)
-    : 1
-
-  // Mostra tags como string ou objeto
-  const tags = Array.isArray(obra.tags)
-    ? obra.tags.map((t: any) => (typeof t === "string" ? t : t.nome))
-    : []
+  const tempoEstimadoLeitura = Math.ceil(obra.conteudo.length / 200) // 200 palavras por minuto
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -81,32 +91,18 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm text-[#6e6e6e] mb-4">
           <span>{obra.genero}</span>
-          {obra.cidade && (
-            <>
-              <span>•</span>
-              <span>{obra.cidade}</span>
-            </>
-          )}
-          {obra.publicada_em && (
-            <>
-              <span>•</span>
-              <span>
-                {new Date(obra.publicada_em).toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </span>
-            </>
-          )}
+          <span>•</span>
+          <span>{obra.cidade}</span>
+          <span>•</span>
+          <span>{obra.publicadoEm}</span>
         </div>
 
         <h1 className="text-4xl font-bold text-[#131313] mb-4">{obra.titulo}</h1>
 
         <div className="flex flex-wrap gap-2 mb-6">
-          {tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
-              {tag}
+          {obra.tags?.map((tag: any) => (
+            <Badge key={tag.id} variant="outline">
+              {tag.nome}
             </Badge>
           ))}
         </div>
@@ -115,26 +111,22 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
         <div className="flex items-center justify-between mb-6 p-4 bg-[#f4f4f4] rounded-lg">
           <div className="flex items-center gap-4">
             <Avatar className="w-12 h-12">
-              <AvatarImage src={"/placeholder.svg?height=40&width=40"} />
+              <AvatarImage src="/placeholder.svg" />
               <AvatarFallback>
-                {obra.autor
-                  ? obra.autor
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                  : "AU"}
+                {(obra.autor?.username ?? "")
+                  .split(" ")
+                  .map((n: any) => n[0])
+                  .join("")}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold text-[#131313]">{obra.autor}</h3>
-              {/* Não temos bio do autor no modelo padrão */}
+              <h3 className="font-semibold text-[#131313]">{obra.autor?.username}</h3>
+              <p className="text-sm text-[#6e6e6e]">{obra.autor?.first_name}</p>
               <div className="flex items-center gap-4 text-xs text-[#6e6e6e] mt-1">
-                {obra.seguidores !== undefined && (
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {obra.seguidores} seguidores
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  0 seguidores
+                </div>
               </div>
             </div>
           </div>
@@ -152,11 +144,11 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              {tempoEstimadoLeitura} min de leitura
+              {obra.tempo_leitura || "5 min"} de leitura
             </div>
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 text-yellow-500 fill-current" />
-              {obra.avaliacao_media || 0}
+              {obra.avaliacao_media || 0} ({obra.total_avaliacoes || 0} avaliações)
             </div>
           </div>
 
@@ -236,21 +228,15 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
           className="prose prose-lg max-w-none text-[#131313] leading-relaxed"
           style={{ fontSize: `${tamanhoFonte}px` }}
         >
-          {/* Se for HTML (do tiptap), renderiza como HTML seguro */}
-          {obra.conteudo && obra.conteudo.trim().startsWith("<p>")
-            ? (
-              <div dangerouslySetInnerHTML={{ __html: obra.conteudo }} />
-            )
-            : (
-              obra.conteudo
-                ? obra.conteudo.split("\n\n").map((paragrafo: string, index: number) => (
-                  <p key={index} className="mb-6">
-                    {paragrafo.trim()}
-                  </p>
-                ))
-                : <p>Sem conteúdo.</p>
-            )
-          }
+          {obra.conteudo ? (
+            obra.conteudo.split("\n\n").map((paragrafo: any, index: any) => (
+              <p key={index} className="mb-6">
+                {paragrafo.trim()}
+              </p>
+            ))
+          ) : (
+            <p className="text-[#6e6e6e] italic">Conteúdo não disponível</p>
+          )}
         </div>
       </Card>
 

@@ -29,8 +29,8 @@ urlpatterns = [
     path('api/profiles/follow/<str:username>/', seguir_usuario, name='seguir-usuario'),
     path('api/profiles/unfollow/<str:username>/', deixar_de_seguir, name='deixar-de-seguir'),
 
-    # API de obras
-    path('api/', include('obras_vs.urls')),  # Adicione esta linha para incluir as rotas de obras
+    # obras
+    path('api/', include('obras_vs.urls')),
 ]
 
 if settings.DEBUG:
