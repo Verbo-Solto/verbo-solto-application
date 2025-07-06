@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
+import axios from "axios"
 import {
   Heart,
   MessageCircle,
@@ -21,32 +22,68 @@ import {
 } from "lucide-react"
 
 interface LeitorObraProps {
-  obra: any
+  obraId: string
 }
 
-export function LeitorObra({ obra }: LeitorObraProps) {
+export function LeitorObra({ obraId }: LeitorObraProps) {
+  const [obra, setObra] = useState<any>(null)
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [curtiu, setCurtiu] = useState(false)
   const [salvou, setSalvou] = useState(false)
   const [tamanhoFonte, setTamanhoFonte] = useState(16)
   const [progressoLeitura, setProgressoLeitura] = useState(35)
 
+  // Buscar dados da obra da API
   useEffect(() => {
-    if (typeof window === "undefined") return
+    setCarregando(true)
+    setErro(null)
+    axios
+      .get(`http://localhost:8000/api/obras/${obraId}/`)
+      .then((resp) => {
+        setObra(resp.data)
+        setCarregando(false)
+      })
+      .catch(() => {
+        setErro("Obra não encontrada.")
+        setCarregando(false)
+      })
+  }, [obraId])
+
+  // Rastreamento do progresso de leitura
+  useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY
       const docHeight = document.documentElement.scrollHeight - window.innerHeight
       const scrollPercent = (scrollTop / docHeight) * 100
       setProgressoLeitura(Math.min(100, Math.max(0, scrollPercent)))
     }
+
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  if (!obra) return null
+  if (carregando) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <p className="text-[#6e6e6e]">Carregando obra...</p>
+        </div>
+      </div>
+    )
+  }
 
-  const tags = obra.tags?.map((t: any) => t.nome) || []
-  const tempoLeitura = Math.ceil((obra.conteudo?.split(/\s+/).length || 0) / 200)
-  const autor = obra.autor || "Autor desconhecido"
+  if (erro || !obra) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <p className="text-red-500">{erro || "Obra não encontrada."}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const tempoEstimadoLeitura = Math.ceil(obra.conteudo.length / 200) // 200 palavras por minuto
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -54,24 +91,18 @@ export function LeitorObra({ obra }: LeitorObraProps) {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm text-[#6e6e6e] mb-4">
           <span>{obra.genero}</span>
-          {obra.cidade && (
-            <>
-              <span>•</span>
-              <span>{obra.cidade}</span>
-            </>
-          )}
           <span>•</span>
-          <span>
-            {obra.publicada_em ? new Date(obra.publicada_em).toLocaleDateString("pt-BR") : ""}
-          </span>
+          <span>{obra.cidade}</span>
+          <span>•</span>
+          <span>{obra.publicadoEm}</span>
         </div>
 
         <h1 className="text-4xl font-bold text-[#131313] mb-4">{obra.titulo}</h1>
 
         <div className="flex flex-wrap gap-2 mb-6">
-          {tags.map((tag: string) => (
-            <Badge key={tag} variant="outline">
-              {tag}
+          {obra.tags?.map((tag: any) => (
+            <Badge key={tag.id} variant="outline">
+              {tag.nome}
             </Badge>
           ))}
         </div>
@@ -80,18 +111,23 @@ export function LeitorObra({ obra }: LeitorObraProps) {
         <div className="flex items-center justify-between mb-6 p-4 bg-[#f4f4f4] rounded-lg">
           <div className="flex items-center gap-4">
             <Avatar className="w-12 h-12">
-              <AvatarImage src="/placeholder.svg?height=40&width=40" />
+              <AvatarImage src="/placeholder.svg" />
               <AvatarFallback>
-                {typeof autor === "string"
-                  ? autor
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                  : "AU"}
+                {(obra.autor?.username ?? "")
+                  .split(" ")
+                  .map((n: any) => n[0])
+                  .join("")}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold text-[#131313]">{autor}</h3>
+              <h3 className="font-semibold text-[#131313]">{obra.autor?.username}</h3>
+              <p className="text-sm text-[#6e6e6e]">{obra.autor?.first_name}</p>
+              <div className="flex items-center gap-4 text-xs text-[#6e6e6e] mt-1">
+                <div className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  0 seguidores
+                </div>
+              </div>
             </div>
           </div>
           <Button variant="outline" className="border-[#009c3b] text-[#009c3b] hover:bg-[#009c3b] hover:text-white">
@@ -104,15 +140,15 @@ export function LeitorObra({ obra }: LeitorObraProps) {
           <div className="flex items-center gap-6 text-sm text-[#6e6e6e]">
             <div className="flex items-center gap-1">
               <Eye className="w-4 h-4" />
-              {obra.visualizacoes || 0} visualizações
+              {obra.visualizacoes} visualizações
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              {tempoLeitura} min de leitura
+              {obra.tempo_leitura || "5 min"} de leitura
             </div>
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 text-yellow-500 fill-current" />
-              {obra.avaliacao_media || 0}
+              {obra.avaliacao_media || 0} ({obra.total_avaliacoes || 0} avaliações)
             </div>
           </div>
 
@@ -125,12 +161,12 @@ export function LeitorObra({ obra }: LeitorObraProps) {
             >
               <Heart className={`w-5 h-5 ${curtiu ? "fill-current" : ""}`} />
             </Button>
-            <span className="text-sm text-[#6e6e6e]">{(obra.curtidas || 0) + (curtiu ? 1 : 0)}</span>
+            <span className="text-sm text-[#6e6e6e]">{obra.curtidas + (curtiu ? 1 : 0)}</span>
 
             <Button variant="ghost" size="icon" className="text-[#6e6e6e]">
               <MessageCircle className="w-5 h-5" />
             </Button>
-            <span className="text-sm text-[#6e6e6e]">{obra.comentarios || 0}</span>
+            <span className="text-sm text-[#6e6e6e]">{obra.comentarios}</span>
 
             <Button
               variant="ghost"
@@ -179,7 +215,7 @@ export function LeitorObra({ obra }: LeitorObraProps) {
               A+
             </Button>
           </div>
-          <div className="text-sm text-[#6e6e6e]">~{tempoLeitura} min restantes</div>
+          <div className="text-sm text-[#6e6e6e]">~{tempoEstimadoLeitura} min restantes</div>
           <Button variant="ghost" size="icon">
             <Settings className="w-5 h-5" />
           </Button>
@@ -192,11 +228,15 @@ export function LeitorObra({ obra }: LeitorObraProps) {
           className="prose prose-lg max-w-none text-[#131313] leading-relaxed"
           style={{ fontSize: `${tamanhoFonte}px` }}
         >
-          {obra.conteudo?.split("\n\n").map((paragrafo: string, index: number) => (
-            <p key={index} className="mb-6">
-              {paragrafo.trim()}
-            </p>
-          ))}
+          {obra.conteudo ? (
+            obra.conteudo.split("\n\n").map((paragrafo: any, index: any) => (
+              <p key={index} className="mb-6">
+                {paragrafo.trim()}
+              </p>
+            ))
+          ) : (
+            <p className="text-[#6e6e6e] italic">Conteúdo não disponível</p>
+          )}
         </div>
       </Card>
 

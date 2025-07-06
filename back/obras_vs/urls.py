@@ -10,4 +10,5 @@ router.register(r'capitulos', CapituloViewSet, basename='capitulo')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('obras/minhas/', ObraViewSet.as_view({'get': 'minhas'}), name='obras-minhas'),
 ]

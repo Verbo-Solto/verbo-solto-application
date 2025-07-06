@@ -11,6 +11,8 @@ from profile_vs.views import (
     seguir_usuario,
     deixar_de_seguir
 )
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,3 +32,6 @@ urlpatterns = [
     # obras
     path('api/', include('obras_vs.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

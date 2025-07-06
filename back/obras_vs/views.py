@@ -57,6 +57,18 @@ class ObraViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(obras, many=True)
         return Response(serializer.data)
 
+    def create(self, request, *args, **kwargs):
+        # Log para depuração
+        print("Dados recebidos no POST /api/obras/:", request.data)
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            # Log de erros de validação
+            print("Erros de validação:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -85,7 +97,4 @@ class CapituloViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Só retorna capítulos das coleções do usuário autenticado
-        return Capitulo.objects.filter(colecao__autor=self.request.user)
-        # Só retorna capítulos das coleções do usuário autenticado
-        return Capitulo.objects.filter(colecao__autor=self.request.user)
         return Capitulo.objects.filter(colecao__autor=self.request.user)
