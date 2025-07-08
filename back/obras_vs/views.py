@@ -12,6 +12,20 @@ class IsAuthorOrReadOnly(BasePermission):
             return True
         return obj.autor == request.user
 
+class ExplorarObrasView(generics.ListAPIView):
+    queryset = Obra.objects.filter(status='publicada').select_related('autor').prefetch_related('tags')
+    serializer_class = ObraSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = {
+        'genero': ['exact'],
+        'autor__cidade': ['exact'],
+        'tags__nome': ['in'],
+    }
+    search_fields = ['titulo']
+    ordering_fields = ['publicada_em', 'curtidas', 'visualizacoes']
+    ordering = ['-publicada_em']
+
 class ObraViewSet(viewsets.ModelViewSet):
     queryset = Obra.objects.all().select_related('autor').prefetch_related('tags')
     serializer_class = ObraSerializer
