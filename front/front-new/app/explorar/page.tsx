@@ -1,19 +1,58 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Cabecalho } from "@/components/cabecalho"
 import { FiltrosExploracao } from "@/components/filtros-exploracao"
 import { GradeObras } from "@/components/grade-obras"
 import { Rodape } from "@/components/rodape"
 
+interface Obra {
+  id: number;
+  titulo: string;
+  capa: string;
+  autor: {
+    username: string;
+  };
+  genero: string;
+  // Adicione outros campos da obra que você espera receber
+}
+
 export default function PaginaExplorar() {
   const [filtros, setFiltros] = useState({
     genero: "",
     cidade: "",
-    tags: [],
-    ordenarPor: "recente",
+    tags: [] as string[],
+    ordenarPor: "-publicada_em",
     busca: "",
   })
+  const [obras, setObras] = useState<Obra[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchObras = async () => {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (filtros.genero) params.append('genero', filtros.genero)
+      if (filtros.cidade) params.append('autor__cidade', filtros.cidade)
+      if (filtros.busca) params.append('search', filtros.busca)
+      if (filtros.ordenarPor) params.append('ordering', filtros.ordenarPor)
+      filtros.tags.forEach(tag => params.append('tags__nome__in', tag))
+
+      try {
+        // Lembre-se de ajustar a URL da API conforme necessário
+        const response = await fetch(`http://127.0.0.1:8000/api/explorar/?${params.toString()}`)
+        const data = await response.json()
+        setObras(data.results || data) // Ajuste conforme a estrutura da sua API (com ou sem paginação)
+      } catch (error) {
+        console.error("Erro ao buscar obras:", error)
+        // Tratar o erro adequadamente
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchObras()
+  }, [filtros])
 
   return (
     <div className="min-h-screen bg-[#fefefe]">
@@ -30,7 +69,11 @@ export default function PaginaExplorar() {
             <FiltrosExploracao filtros={filtros} onFiltrosChange={setFiltros} />
           </div>
           <div className="lg:col-span-3">
-            <GradeObras filtros={filtros} />
+            {loading ? (
+              <p>Carregando obras...</p>
+            ) : (
+              <GradeObras obras={obras} />
+            )}
           </div>
         </div>
       </div>

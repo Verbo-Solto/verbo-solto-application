@@ -17,12 +17,15 @@ import Image from "next/image"
 import { useAuth } from "@/hooks/useAuth"
 
 interface CabecalhoProps {
-  onAuthClick: (modo: "login" | "cadastro") => void
+  onAuthClick: (modo: "login" | "cadastro") => void;
+  estaAutenticado?: boolean;
 }
 
-export function Cabecalho({ onAuthClick }: CabecalhoProps) {
+export function Cabecalho({ onAuthClick, estaAutenticado: propEstaAutenticado }: CabecalhoProps) {
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)
-  const { usuario, estaAutenticado, logout } = useAuth()
+  const { usuario, estaAutenticado: authEstaAutenticado, logout } = useAuth()
+
+  const estaAutenticado = propEstaAutenticado !== undefined ? propEstaAutenticado : authEstaAutenticado
 
   return (
     <header className="bg-white border-b border-[#e2e2e2] sticky top-0 z-50">

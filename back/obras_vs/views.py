@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .models import Obra, Tag, Colecao, Capitulo
 from .serializers import ObraSerializer, TagSerializer, CapituloSerializer, ColecaoSerializer
 from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS, BasePermission
 
 class IsAuthorOrReadOnly(BasePermission):
@@ -11,6 +12,24 @@ class IsAuthorOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         return obj.autor == request.user
+
+class ObraFilter(django_filters.FilterSet):
+    cidade = django_filters.CharFilter(field_name='autor__profile__cidade', lookup_expr='iexact')
+    tags = django_filters.BaseInFilter(field_name='tags__nome', lookup_expr='in')
+
+    class Meta:
+        model = Obra
+        fields = ['genero', 'cidade', 'tags']
+
+class ExplorarObrasView(generics.ListAPIView):
+    queryset = Obra.objects.filter(status='publicada').select_related('autor', 'autor__profile').prefetch_related('tags')
+    serializer_class = ObraSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ObraFilter # Usando a classe de filtro personalizada
+    search_fields = ['titulo']
+    ordering_fields = ['publicada_em', 'curtidas', 'visualizacoes']
+    ordering = ['-publicada_em']
 
 class ObraViewSet(viewsets.ModelViewSet):
     queryset = Obra.objects.all().select_related('autor').prefetch_related('tags')
