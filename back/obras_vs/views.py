@@ -6,6 +6,7 @@ from .serializers import ObraSerializer, TagSerializer, CapituloSerializer, Cole
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS, BasePermission
+from django.db.models import Count, Sum
 
 class IsAuthorOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -26,7 +27,7 @@ class ExplorarObrasView(generics.ListAPIView):
     serializer_class = ObraSerializer
     permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_class = ObraFilter # Usando a classe de filtro personalizada
+    filterset_class = ObraFilter
     search_fields = ['titulo']
     ordering_fields = ['publicada_em', 'curtidas', 'visualizacoes']
     ordering = ['-publicada_em']
@@ -76,15 +77,27 @@ class ObraViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(obras, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='estatisticas-gerais', permission_classes=[permissions.AllowAny])
+    def estatisticas_gerais(self, request):
+        obras_publicadas = Obra.objects.filter(status='publicada').count()
+        escritores_ativos = Obra.objects.filter(status='publicada').values('autor').distinct().count()
+        leituras = Obra.objects.filter(status='publicada').aggregate(total=Sum('visualizacoes'))['total'] or 0
+        avaliacoes = Obra.objects.filter(status='publicada').aggregate(total=Sum('comentarios'))['total'] or 0  # Ajuste conforme modelo real
+
+        return Response({
+            "obras_publicadas": obras_publicadas,
+            "escritores_ativos": escritores_ativos,
+            "leituras": leituras,
+            "avaliacoes": avaliacoes,
+        })
+
     def create(self, request, *args, **kwargs):
-        # Log para depuração
         print("Dados recebidos no POST /api/obras/:", request.data)
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             self.perform_create(serializer)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            # Log de erros de validação
             print("Erros de validação:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -92,8 +105,6 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [permissions.AllowAny]
-
-from rest_framework import mixins
 
 class ColecaoViewSet(viewsets.ModelViewSet):
     queryset = Colecao.objects.all()
@@ -115,5 +126,4 @@ class CapituloViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Só retorna capítulos das coleções do usuário autenticado
         return Capitulo.objects.filter(colecao__autor=self.request.user)
