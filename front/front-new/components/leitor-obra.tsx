@@ -33,6 +33,7 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
   const [salvou, setSalvou] = useState(false)
   const [tamanhoFonte, setTamanhoFonte] = useState(16)
   const [progressoLeitura, setProgressoLeitura] = useState(35)
+  const [paginaAtual, setPaginaAtual] = useState(0) // Nova state para controlar a página atual
 
   // Buscar dados da obra da API
   useEffect(() => {
@@ -50,18 +51,43 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
       })
   }, [obraId])
 
-  // Rastreamento do progresso de leitura
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight
-      const scrollPercent = (scrollTop / docHeight) * 100
-      setProgressoLeitura(Math.min(100, Math.max(0, scrollPercent)))
-    }
+  // Dados derivados
+  const tempoEstimadoLeitura = Math.ceil((obra?.conteudo?.length || 0) / 200) // 200 palavras por minuto
+  const paginas = obra?.paginas || []
+  const totalPaginas = paginas.length
+  const paginaAtualConteudo = paginas[paginaAtual] || obra?.conteudo
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  // Funções para navegação entre páginas
+  const irParaPaginaAnterior = () => {
+    if (paginaAtual > 0) {
+      setPaginaAtual(paginaAtual - 1)
+    }
+  }
+
+  const irParaProximaPagina = () => {
+    if (paginaAtual < totalPaginas - 1) {
+      setPaginaAtual(paginaAtual + 1)
+    }
+  }
+
+  // Calcular progresso baseado na página atual
+  useEffect(() => {
+    if (totalPaginas > 1) {
+      const progressoPagina = ((paginaAtual + 1) / totalPaginas) * 100
+      setProgressoLeitura(Math.min(100, Math.max(0, progressoPagina)))
+    } else {
+      // Para obras de página única, usar scroll como antes
+      const handleScroll = () => {
+        const scrollTop = window.scrollY
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight
+        const scrollPercent = (scrollTop / docHeight) * 100
+        setProgressoLeitura(Math.min(100, Math.max(0, scrollPercent)))
+      }
+
+      window.addEventListener("scroll", handleScroll)
+      return () => window.removeEventListener("scroll", handleScroll)
+    }
+  }, [paginaAtual, totalPaginas])
 
   if (carregando) {
     return (
@@ -82,8 +108,6 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
       </div>
     )
   }
-
-  const tempoEstimadoLeitura = Math.ceil(obra.conteudo.length / 200) // 200 palavras por minuto
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -196,11 +220,25 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
       {/* Controles de Leitura */}
       <div className="flex justify-between items-center mb-6 p-4 bg-white border border-[#e2e2e2] rounded-lg sticky top-20 z-10">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" disabled>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            disabled={paginaAtual === 0}
+            onClick={irParaPaginaAnterior}
+            className="disabled:opacity-50"
+          >
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <span className="text-sm text-[#6e6e6e]">Capítulo Único</span>
-          <Button variant="ghost" size="icon" disabled>
+          <span className="text-sm text-[#6e6e6e]">
+            {totalPaginas > 1 ? `Página ${paginaAtual + 1} de ${totalPaginas}` : "Página Única"}
+          </span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            disabled={paginaAtual >= totalPaginas - 1}
+            onClick={irParaProximaPagina}
+            className="disabled:opacity-50"
+          >
             <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
@@ -228,8 +266,8 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
           className="prose prose-lg max-w-none text-[#131313] leading-relaxed"
           style={{ fontSize: `${tamanhoFonte}px` }}
         >
-          {obra.conteudo ? (
-            obra.conteudo.split("\n\n").map((paragrafo: any, index: any) => (
+          {paginaAtualConteudo ? (
+            paginaAtualConteudo.split("\n\n").map((paragrafo: any, index: any) => (
               <p key={index} className="mb-6">
                 {paragrafo.trim()}
               </p>
@@ -238,6 +276,35 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
             <p className="text-[#6e6e6e] italic">Conteúdo não disponível</p>
           )}
         </div>
+        
+        {/* Navegação inferior */}
+        {totalPaginas > 1 && (
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#e2e2e2]">
+            <Button 
+              variant="outline" 
+              disabled={paginaAtual === 0}
+              onClick={irParaPaginaAnterior}
+              className="disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Página Anterior
+            </Button>
+            
+            <span className="text-sm text-[#6e6e6e] font-medium">
+              {paginaAtual + 1} de {totalPaginas}
+            </span>
+            
+            <Button 
+              variant="outline" 
+              disabled={paginaAtual >= totalPaginas - 1}
+              onClick={irParaProximaPagina}
+              className="disabled:opacity-50"
+            >
+              Próxima Página
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Seção de Avaliação */}
