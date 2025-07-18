@@ -12,4 +12,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('explorar/', ExplorarObrasView.as_view(), name='explorar-obras'),
     path('obras/minhas/', ObraViewSet.as_view({'get': 'minhas'}), name='obras-minhas'),
+    path('obras/estatisticas-gerais/', ObraViewSet.as_view({'get': 'estatisticas_gerais'}), name='estatisticas-gerais'),
 ]
