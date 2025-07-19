@@ -4,33 +4,13 @@ from rest_framework.response import Response
 from .models import Obra, Tag, Colecao, Capitulo
 from .serializers import ObraSerializer, TagSerializer, CapituloSerializer, ColecaoSerializer
 from django_filters.rest_framework import DjangoFilterBackend
-import django_filters
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS, BasePermission
-from django.db.models import Count, Sum
 
 class IsAuthorOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
         return obj.autor == request.user
-
-class ObraFilter(django_filters.FilterSet):
-    cidade = django_filters.CharFilter(field_name='autor__profile__cidade', lookup_expr='iexact')
-    tags = django_filters.BaseInFilter(field_name='tags__nome', lookup_expr='in')
-
-    class Meta:
-        model = Obra
-        fields = ['genero', 'cidade', 'tags']
-
-class ExplorarObrasView(generics.ListAPIView):
-    queryset = Obra.objects.filter(status='publicada').select_related('autor', 'autor__profile').prefetch_related('tags')
-    serializer_class = ObraSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_class = ObraFilter
-    search_fields = ['titulo']
-    ordering_fields = ['publicada_em', 'curtidas', 'visualizacoes']
-    ordering = ['-publicada_em']
 
 class ObraViewSet(viewsets.ModelViewSet):
     queryset = Obra.objects.all().select_related('autor').prefetch_related('tags')
@@ -76,20 +56,6 @@ class ObraViewSet(viewsets.ModelViewSet):
         obras = Obra.objects.filter(autor=request.user)
         serializer = self.get_serializer(obras, many=True)
         return Response(serializer.data)
-
-    @action(detail=False, methods=['get'], url_path='estatisticas-gerais', permission_classes=[permissions.AllowAny])
-    def estatisticas_gerais(self, request):
-        obras_publicadas = Obra.objects.filter(status='publicada').count()
-        escritores_ativos = Obra.objects.filter(status='publicada').values('autor').distinct().count()
-        leituras = Obra.objects.filter(status='publicada').aggregate(total=Sum('visualizacoes'))['total'] or 0
-        avaliacoes = Obra.objects.filter(status='publicada').aggregate(total=Sum('comentarios'))['total'] or 0  # Ajuste conforme modelo real
-
-        return Response({
-            "obras_publicadas": obras_publicadas,
-            "escritores_ativos": escritores_ativos,
-            "leituras": leituras,
-            "avaliacoes": avaliacoes,
-        })
 
     def create(self, request, *args, **kwargs):
         print("Dados recebidos no POST /api/obras/:", request.data)
