@@ -5,7 +5,11 @@ from .models import Obra, Tag, Colecao, Capitulo
 from .serializers import ObraSerializer, TagSerializer, CapituloSerializer, ColecaoSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS, BasePermission
-
+from rest_framework.generics import ListAPIView
+from .models import Obra
+from .serializers import ObraSerializer
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 class IsAuthorOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
@@ -93,3 +97,15 @@ class CapituloViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Capitulo.objects.filter(colecao__autor=self.request.user)
+
+
+
+
+class ExplorarObrasView(ListAPIView):
+    queryset = Obra.objects.filter(status='publicada')
+    serializer_class = ObraSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['genero', 'cidade', 'tags__nome']
+    search_fields = ['titulo']
+    ordering_fields = ['publicada_em', 'curtidas', 'visualizacoes']
+    ordering = ['-publicada_em']

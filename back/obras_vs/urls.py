@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ObraViewSet, TagViewSet, ColecaoViewSet, CapituloViewSet
+from .views import ExplorarObrasView, ObraViewSet, TagViewSet, ColecaoViewSet, CapituloViewSet
 
 router = DefaultRouter()
 router.register(r'obras', ObraViewSet, basename='obra')
@@ -9,6 +9,8 @@ router.register(r'colecoes', ColecaoViewSet, basename='colecao')
 router.register(r'capitulos', CapituloViewSet, basename='capitulo')
 
 urlpatterns = [
+    path('explorar/', ExplorarObrasView.as_view(), name='explorar-obras'),
     path('', include(router.urls)),
     path('obras/minhas/', ObraViewSet.as_view({'get': 'minhas'}), name='obras-minhas'),
+
 ]

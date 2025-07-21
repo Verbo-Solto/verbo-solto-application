@@ -6,16 +6,7 @@ import { FiltrosExploracao } from "@/components/filtros-exploracao"
 import { GradeObras } from "@/components/grade-obras"
 import { Rodape } from "@/components/rodape"
 
-interface Obra {
-  id: number;
-  titulo: string;
-  capa: string;
-  autor: {
-    username: string;
-  };
-  genero: string;
-  // Adicione outros campos da obra que você espera receber
-}
+import type { Obra } from "@/types/Obra"
 
 export default function PaginaExplorar() {
   const [filtros, setFiltros] = useState({
