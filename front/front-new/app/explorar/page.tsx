@@ -5,6 +5,7 @@ import { Cabecalho } from "@/components/cabecalho"
 import { FiltrosExploracao } from "@/components/filtros-exploracao"
 import { GradeObras } from "@/components/grade-obras"
 import { Rodape } from "@/components/rodape"
+import { PageLayout } from "@/components/PageLayout"
 
 interface Obra {
   id: number;
@@ -14,7 +15,14 @@ interface Obra {
     username: string;
   };
   genero: string;
-  // Adicione outros campos da obra que você espera receber
+  cidade: string;
+  tags: any[];
+  resumo: string;
+  curtidas: number;
+  comentarios: number;
+  visualizacoes: number;
+  dataPublicacao: string;
+  tempoLeitura: string;
 }
 
 export default function PaginaExplorar() {
@@ -55,9 +63,7 @@ export default function PaginaExplorar() {
   }, [filtros])
 
   return (
-    <div className="min-h-screen bg-[#fefefe]">
-      <Cabecalho onAuthClick={() => {}} estaAutenticado={true} />
-
+    <PageLayout cabecalhoProps={{ onAuthClick: () => {} }} showFooter>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#131313] mb-2">Explorar Obras</h1>
@@ -77,8 +83,6 @@ export default function PaginaExplorar() {
           </div>
         </div>
       </div>
-
-      <Rodape />
-    </div>
+    </PageLayout>
   )
 }

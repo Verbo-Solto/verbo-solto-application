@@ -31,6 +31,7 @@ export function InterfaceEscrita() {
   const [novaColecao, setNovaColecao] = useState("")
   const [aba, setAba] = useState<"escrever" | "colecoes">("escrever")
   const [capa, setCapa] = useState<File | null>(null)
+  const [capaBase64, setCapaBase64] = useState<string | null>(null)
   const [statusObra, setStatusObra] = useState<"publicada" | "rascunho">("publicada")
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -79,68 +80,74 @@ export function InterfaceEscrita() {
       .get("http://localhost:8000/api/colecoes/", {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((resp) => setColecoes(resp.data))
+      .then((resp) => setColecoes(Array.isArray(resp.data) ? resp.data : []))
       .catch(() => setColecoes([]))
   }, [])
 
-  const [paginas, setPaginas] = useState<string[]>([""])
+  // Substituir estados de páginas por capítulos
+  type Capitulo = {
+    titulo: string
+    paginas: string[]
+  }
+  const [capitulos, setCapitulos] = useState<Capitulo[]>([
+    { titulo: "Capítulo 1", paginas: [""] }
+  ])
+  const [capituloAtual, setCapituloAtual] = useState(0)
   const [paginaAtual, setPaginaAtual] = useState(0)
   const [erroPagina, setErroPagina] = useState<string | null>(null)
 
  
-  useEffect(() => {
-    if (conteudo.startsWith("<p>")) {
-      setPaginas([conteudo])
-      setPaginaAtual(0)
-    } else {
-      const palavras = conteudo.split(/\s+/).filter(Boolean)
-      const novasPaginas = []
-      for (let i = 0; i < palavras.length; i += 300) {
-        novasPaginas.push(palavras.slice(i, i + 300).join(" "))
-      }
-      if (novasPaginas.length === 0) novasPaginas.push("")
-      setPaginas(novasPaginas)
-      if (paginaAtual >= novasPaginas.length) setPaginaAtual(novasPaginas.length - 1)
-    }
-  }, [conteudo])
-
-  const handlePaginaChange = (valor: string, idx: number) => {
-    setErroPagina(null)
-    const palavras = valor.split(/\s+/).filter(Boolean)
-    if (palavras.length > 300) {
-      setErroPagina("Cada página pode ter no máximo 300 palavras.")
-      return
-    }
-    if (valor.length > 3000) {
-      setErroPagina("Cada página pode ter no máximo 3.000 caracteres.")
-      return
-    }
-    const novasPaginas = [...paginas]
-    novasPaginas[idx] = valor
-    setPaginas(novasPaginas)
-    setConteudo(novasPaginas.join(" ").replace(/\s+/g, " ").trim())
+  // Funções para capítulos e páginas
+  function adicionarCapitulo() {
+    setCapitulos((prev) => [...prev, { titulo: `Capítulo ${prev.length + 1}`, paginas: [""] }])
+    setCapituloAtual(capitulos.length)
+    setPaginaAtual(0)
   }
-
-  // Adiciona uma nova página vazia
+  function removerCapitulo(idx: number) {
+    if (capitulos.length === 1) return
+    const novos = capitulos.filter((_, i) => i !== idx)
+    setCapitulos(novos)
+    setCapituloAtual(Math.max(0, capituloAtual - (idx === capituloAtual ? 1 : 0)))
+    setPaginaAtual(0)
+  }
+  function alterarTituloCapitulo(valor: string) {
+    setCapitulos((prev) => {
+      const novos = [...prev]
+      novos[capituloAtual].titulo = valor
+      return novos
+    })
+  }
   function adicionarPagina() {
-    if (paginas.length >= 10) return
-    setPaginas([...paginas, ""])
-    setPaginaAtual(paginas.length)
+    setCapitulos((prev) => {
+      const novos = [...prev]
+      if (novos[capituloAtual].paginas.length >= 10) return novos
+      novos[capituloAtual].paginas.push("")
+      return novos
+    })
+    setPaginaAtual(capitulos[capituloAtual].paginas.length)
+  }
+  function removerPagina(idx: number) {
+    setCapitulos((prev) => {
+      const novos = [...prev]
+      if (novos[capituloAtual].paginas.length === 1) return novos
+      novos[capituloAtual].paginas.splice(idx, 1)
+      return novos
+    })
+    setPaginaAtual(Math.max(0, paginaAtual - (idx === paginaAtual ? 1 : 0)))
+  }
+  function handlePaginaChange(valor: string, idx: number) {
+    setCapitulos((prev) => {
+      const novos = [...prev]
+      novos[capituloAtual].paginas[idx] = valor
+      return novos
+    })
   }
 
-  // Upload de capa (salva como base64 para enviar ao backend)
-  const [capaBase64, setCapaBase64] = useState<string | null>(null)
-  const handleCapaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setCapa(e.target.files[0])
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        const base64 = (ev.target?.result as string).split(",")[1]
-        setCapaBase64(base64)
-      }
-      reader.readAsDataURL(e.target.files[0])
-    }
-  }
+  // Atualizar conteudo para salvar/publicar
+  useEffect(() => {
+    // Atualiza o campo conteudo para manter compatibilidade com backend
+    setConteudo(JSON.stringify(capitulos))
+  }, [capitulos])
 
   // Carregar dados da obra para edição
   useEffect(() => {
@@ -179,14 +186,19 @@ export function InterfaceEscrita() {
   // Ao carregar o conteúdo para edição, atualiza as páginas
   useEffect(() => {
     if (obraId && conteudo) {
-      // Divide o texto em páginas de até 300 palavras cada
-      const palavras = conteudo.split(/\s+/).filter(Boolean)
-      const novasPaginas = []
-      for (let i = 0; i < palavras.length; i += 300) {
-        novasPaginas.push(palavras.slice(i, i + 300).join(" "))
+      try {
+        const cap = JSON.parse(conteudo)
+        if (Array.isArray(cap) && cap.length > 0 && cap[0].paginas) {
+          setCapitulos(cap)
+        } else {
+          // Conteúdo não está no novo formato, cria capítulo padrão
+          setCapitulos([{ titulo: "Capítulo 1", paginas: [conteudo] }])
+        }
+      } catch {
+        // Conteúdo não é JSON, cria capítulo padrão
+        setCapitulos([{ titulo: "Capítulo 1", paginas: [conteudo] }])
       }
-      if (novasPaginas.length === 0) novasPaginas.push("")
-      setPaginas(novasPaginas)
+      setCapituloAtual(0)
       setPaginaAtual(0)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,7 +219,7 @@ export function InterfaceEscrita() {
       const payload: any = {
         titulo,
         genero,
-        conteudo: paginas.join(" ").replace(/\s+/g, " ").trim(),
+        conteudo: JSON.stringify(capitulos),
         resumo,
         cidade,
         status: "rascunho",
@@ -256,14 +268,20 @@ export function InterfaceEscrita() {
       setPublicando(false)
       return
     }
-    const palavras = conteudo.split(/\s+/).filter(Boolean)
-    if (palavras.length > 2000) {
-      setErro("O texto excede o limite de 2000 palavras.")
+    const cap = JSON.parse(conteudo)
+    if (cap.length === 0) {
+      setErro("A obra deve ter pelo menos um capítulo.")
       setPublicando(false)
       return
     }
-    if (conteudo.length < 1500 || conteudo.length > 3000) {
-      setErro("O texto deve ter entre 1.500 e 3.000 caracteres (com espaços).")
+    // Corrigir tipagem dos parâmetros 'c' e 'p' nas validações
+    if ((cap as Array<{paginas: string[]}>).some((c: {paginas: string[]}) => c.paginas.length === 0)) {
+      setErro("Cada capítulo deve ter pelo menos uma página.")
+      setPublicando(false)
+      return
+    }
+    if ((cap as Array<{paginas: string[]}>).some((c: {paginas: string[]}) => c.paginas.some((p: string) => p.length < 150 || p.length > 3000))) {
+      setErro("O texto de cada página deve ter entre 150 e 3.000 caracteres (com espaços).")
       setPublicando(false)
       return
     }
@@ -288,7 +306,7 @@ export function InterfaceEscrita() {
       const payload: any = {
         titulo,
         genero,
-        conteudo: paginas.join(" ").replace(/\s+/g, " ").trim(),
+        conteudo: JSON.stringify(capitulos),
         resumo,
         cidade,
         status: "publicada",
@@ -358,6 +376,18 @@ export function InterfaceEscrita() {
 
   function removerTag(tagRemover: string): void {
     setTags(tags.filter((tag) => tag !== tagRemover))
+  }
+
+  const handleCapaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setCapa(e.target.files[0])
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const base64 = (ev.target?.result as string).split(",")[1]
+        setCapaBase64(base64)
+      }
+      reader.readAsDataURL(e.target.files[0])
+    }
   }
 
   return (
@@ -447,58 +477,81 @@ export function InterfaceEscrita() {
                     <Label className="text-base font-medium text-[#131313] mb-3 block">
                       Conteúdo
                     </Label>
-                    {/* Se for HTML do tiptap, renderize o editor tiptap */}
-                    {paginas.length === 1 && paginas[0].startsWith("<p>") ? (
-                      <EditorTiptap
-                        content={paginas[0]}
-                        onChange={setConteudo}
-                        placeholder="Digite o texto da sua obra..."
-                      />
-                    ) : (
-                      <>
-                        <div className="flex gap-2 mb-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPaginaAtual(Math.max(0, paginaAtual - 1))}
-                            disabled={paginaAtual === 0}
-                          >
-                            {"← Página anterior"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPaginaAtual(Math.min(paginas.length - 1, paginaAtual + 1))}
-                            disabled={paginaAtual === paginas.length - 1}
-                          >
-                            {"Próxima página →"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={adicionarPagina}
-                            disabled={paginas.length >= 10}
-                          >
-                            + Nova Página
-                          </Button>
-                          <span className="ml-auto text-xs text-[#6e6e6e]">
-                            {paginas[paginaAtual]?.split(/\s+/).filter(Boolean).length || 0}/300 palavras
-                          </span>
-                        </div>
-                        <Textarea
-                          value={paginas[paginaAtual]}
-                          onChange={e => handlePaginaChange(e.target.value, paginaAtual)}
-                          placeholder="Digite o texto desta página... Use Enter para quebrar linhas normalmente."
-                          className="min-h-[200px] border-[#e5e7eb] focus:border-[#009c3b] focus:ring-[#009c3b] font-mono whitespace-pre-line"
-                          maxLength={3000}
-                        />
-                        <div className="flex justify-end text-xs text-[#6e6e6e] mt-1">
-                          {paginas[paginaAtual]?.length || 0}/3000 caracteres
-                        </div>
-                        {erroPagina && (
-                          <div className="mt-2 text-red-600 text-sm">{erroPagina}</div>
-                        )}
-                      </>
+                    {/* Navegação de capítulos */}
+                    <div className="flex gap-2 mb-2">
+                      {capitulos.map((cap, idx) => (
+                        <Button
+                          key={idx}
+                          variant={capituloAtual === idx ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => { setCapituloAtual(idx); setPaginaAtual(0) }}
+                        >
+                          {cap.titulo}
+                        </Button>
+                      ))}
+                      <Button onClick={adicionarCapitulo} size="sm" className="bg-[#009c3b] text-white">+ Capítulo</Button>
+                      {capitulos.length > 1 && (
+                        <Button onClick={() => removerCapitulo(capituloAtual)} size="sm" className="bg-red-500 text-white">Remover</Button>
+                      )}
+                    </div>
+                    <Input
+                      value={capitulos[capituloAtual].titulo}
+                      onChange={e => alterarTituloCapitulo(e.target.value)}
+                      className="mb-2"
+                      placeholder="Título do capítulo"
+                    />
+                    {/* Navegação de páginas */}
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPaginaAtual(Math.max(0, paginaAtual - 1))}
+                        disabled={paginaAtual === 0}
+                      >
+                        {"← Página anterior"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPaginaAtual(Math.min(capitulos[capituloAtual].paginas.length - 1, paginaAtual + 1))}
+                        disabled={paginaAtual === capitulos[capituloAtual].paginas.length - 1}
+                      >
+                        {"Próxima página →"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={adicionarPagina}
+                        disabled={capitulos[capituloAtual].paginas.length >= 10}
+                      >
+                        + Nova Página
+                      </Button>
+                      {capitulos[capituloAtual].paginas.length > 1 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removerPagina(paginaAtual)}
+                          className="text-red-500"
+                        >
+                          Remover Página
+                        </Button>
+                      )}
+                      <span className="ml-auto text-xs text-[#6e6e6e]">
+                        {capitulos[capituloAtual].paginas[paginaAtual]?.split(/\s+/).filter(Boolean).length || 0}/300 palavras
+                      </span>
+                    </div>
+                    <Textarea
+                      value={capitulos[capituloAtual].paginas[paginaAtual]}
+                      onChange={e => handlePaginaChange(e.target.value, paginaAtual)}
+                      placeholder="Digite o texto desta página... Use Enter para quebrar linhas normalmente."
+                      className="min-h-[400px] border-[#e5e7eb] focus:border-[#009c3b] focus:ring-[#009c3b] font-mono whitespace-pre-line"
+                      maxLength={3000}
+                    />
+                    <div className="flex justify-end text-xs text-[#6e6e6e] mt-1">
+                      {capitulos[capituloAtual].paginas[paginaAtual]?.length || 0}/3000 caracteres
+                    </div>
+                    {erroPagina && (
+                      <div className="mt-2 text-red-600 text-sm">{erroPagina}</div>
                     )}
                   </CardContent>
                 </Card>
@@ -508,11 +561,15 @@ export function InterfaceEscrita() {
                   <CardContent className="p-6">
                     <Label className="text-base font-medium text-[#131313] mb-3 block">Prévia Paginada</Label>
                     <div className="border border-[#e5e7eb] rounded-lg p-4 bg-[#fafafa]">
-                      {paginas.map((pagina, idx) => (
-                        <div key={idx} className="mb-8">
-                          <div className="text-xs text-[#009c3b] mb-2">Página {idx + 1}</div>
-                          {/* Mostra as quebras de linha reais do texto */}
-                          <div className="whitespace-pre-line">{pagina}</div>
+                      {capitulos.map((cap, idxCap) => (
+                        <div key={idxCap} className="mb-8">
+                          <div className="font-bold text-[#009c3b] mb-2">{cap.titulo}</div>
+                          {cap.paginas.map((pagina, idxPag) => (
+                            <div key={idxPag} className="mb-6">
+                              <div className="text-xs text-[#009c3b] mb-2">Página {idxPag + 1}</div>
+                              <div className="whitespace-pre-line">{pagina}</div>
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
@@ -649,7 +706,7 @@ export function InterfaceEscrita() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Sem coleção</SelectItem>
-                        {colecoes.map((c) => (
+                        {Array.isArray(colecoes) && colecoes.map((c) => (
                           <SelectItem key={c.id} value={String(c.id)}>
                             {c.nome}
                           </SelectItem>
@@ -690,17 +747,19 @@ export function InterfaceEscrita() {
                       <div className="flex justify-between">
                         <span className="text-[#6e6e6e]">Palavras:</span>
                         <span className="font-medium text-[#131313]">
-                          {conteudo.split(" ").filter((word) => word.length > 0).length}
+                          {capitulos.reduce((acc, cap) => acc + cap.paginas.reduce((a, p) => a + p.split(" ").filter((w) => w.length > 0).length, 0), 0)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#6e6e6e]">Caracteres:</span>
-                        <span className="font-medium text-[#131313]">{conteudo.length}</span>
+                        <span className="font-medium text-[#131313]">
+                          {capitulos.reduce((acc, cap) => acc + cap.paginas.reduce((a, p) => a + p.length, 0), 0)}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#6e6e6e]">Tempo de leitura:</span>
                         <span className="font-medium text-[#131313]">
-                          {Math.ceil(conteudo.split(" ").filter((word) => word.length > 0).length / 200)} min
+                          {Math.ceil(capitulos.reduce((acc, cap) => acc + cap.paginas.reduce((a, p) => a + p.split(" ").filter((w) => w.length > 0).length, 0), 0) / 200)} min
                         </span>
                       </div>
                     </div>
@@ -721,10 +780,15 @@ export function InterfaceEscrita() {
                   </button>
                   <h2 className="text-xl font-bold mb-4">Prévia da Obra</h2>
                   <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-                    {paginas.map((pagina, idx) => (
-                      <div key={idx} className="mb-6">
-                        <div className="text-xs text-[#009c3b] mb-2">Página {idx + 1}</div>
-                        <div className="whitespace-pre-line">{pagina}</div>
+                    {capitulos.map((cap, idxCap) => (
+                      <div key={idxCap} className="mb-8">
+                        <div className="font-bold text-[#009c3b] mb-2">{cap.titulo}</div>
+                        {cap.paginas.map((pagina, idxPag) => (
+                          <div key={idxPag} className="mb-6">
+                            <div className="text-xs text-[#009c3b] mb-2">Página {idxPag + 1}</div>
+                            <div className="whitespace-pre-line">{pagina}</div>
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>

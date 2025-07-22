@@ -2,12 +2,15 @@
 
 import { Cabecalho } from "@/components/cabecalho"
 import { InterfaceEscrita } from "@/components/interface-escrita"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { PageLayout } from "@/components/PageLayout"
 
 export default function PaginaEscrever() {
   return (
-    <div className="min-h-screen bg-[#fefefe]">
-      <Cabecalho onAuthClick={() => {}} estaAutenticado={true} />
-      <InterfaceEscrita />
-    </div>
+    <ProtectedRoute>
+      <PageLayout cabecalhoProps={{ onAuthClick: () => {}, estaAutenticado: true }}>
+        <InterfaceEscrita />
+      </PageLayout>
+    </ProtectedRoute>
   )
 }

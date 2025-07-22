@@ -56,7 +56,7 @@ export function GradeObras({ obras }: GradeObrasProps) {
           <Link href={`/obra/${obra.id}`}>
             <div className="relative h-48 w-full">
               <img
-                src={obra.capa || "/placeholder.svg"} // Use um placeholder se não houver capa
+                src={obra.capa ? (obra.capa.startsWith("data:image") || obra.capa.length > 100 ? `data:image/png;base64,${obra.capa}` : obra.capa) : "/placeholder.svg"}
                 alt={`Capa da obra ${obra.titulo}`}
                 className="object-cover w-full h-full"
               />

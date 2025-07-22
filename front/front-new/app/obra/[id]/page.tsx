@@ -7,6 +7,7 @@ import { ObrasRelacionadas } from "@/components/obras-relacionadas"
 import { Rodape } from "@/components/rodape"
 import { useEffect, useState } from "react"
 import axios from "axios"
+import { PageLayout } from "@/components/PageLayout"
 
 interface PaginaObraProps {
   readonly params: {
@@ -30,8 +31,7 @@ export default function PaginaObra({ params }: PaginaObraProps) {
   }, [params.id])
 
   return (
-    <div className="min-h-screen bg-[#fefefe]">
-      <Cabecalho onAuthClick={() => {}} />
+    <PageLayout cabecalhoProps={{ onAuthClick: () => {} }} showFooter>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {carregando && <div className="text-center text-[#009c3b]">Carregando obra...</div>}
         {erro && <div className="text-center text-red-600">{erro}</div>}
@@ -43,7 +43,6 @@ export default function PaginaObra({ params }: PaginaObraProps) {
           </>
         )}
       </div>
-      <Rodape />
-    </div>
+    </PageLayout>
   )
 }
