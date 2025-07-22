@@ -98,20 +98,24 @@ export function InterfaceMinhasObras() {
     fetchObras()
   }, [])
 
+  // Função para buscar coleções
+  const fetchColecoes = async () => {
+    try {
+      const token = localStorage.getItem("access")
+      if (!token) return
+      const resp = await axios.get("http://localhost:8000/api/colecoes/", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      // Lida com respostas paginadas ou não paginadas
+      const colecoesData = resp.data.results || resp.data
+      setColecoes(Array.isArray(colecoesData) ? colecoesData : [])
+    } catch {
+      setColecoes([])
+    }
+  }
+
   // Busca as coleções do usuário
   useEffect(() => {
-    async function fetchColecoes() {
-      try {
-        const token = localStorage.getItem("access")
-        if (!token) return
-        const resp = await axios.get("http://localhost:8000/api/colecoes/", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        setColecoes(resp.data)
-      } catch {
-        setColecoes([])
-      }
-    }
     fetchColecoes()
   }, [])
 
@@ -125,13 +129,13 @@ export function InterfaceMinhasObras() {
     try {
       const token = localStorage.getItem("access")
       if (!token) return
-      const resp = await axios.post(
+      await axios.post(
         "http://localhost:8000/api/colecoes/",
         { nome: novaColecao, descricao: "" },
         { headers: { Authorization: `Bearer ${token}` } }
       )
-      setColecoes([...colecoes, resp.data])
       setNovaColecao("")
+      await fetchColecoes() // Re-busca as coleções
     } catch {
       alert("Erro ao criar coleção.")
     }

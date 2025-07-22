@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, MapPin, Calendar, BookOpen, Heart, Users, Edit, Camera, Settings, Shield } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
+import Link from "next/link"
 
 interface PerfilAPI {
   user: {
@@ -46,7 +47,6 @@ export function InterfacePerfil() {
     cidade: "",
     dataIngresso: "",
     website: "",
-    generosPreferidos: ["Ficção Científica", "Drama", "Romance"],
     imagem: "",
     seguidores: 0,
     seguindo: 0,
@@ -62,7 +62,7 @@ export function InterfacePerfil() {
       return
     }
     try {
-      const response = await axios.get<PerfilAPI>("http://localhost:8000/api/profiles/me/", {
+      const response = await axios.get<PerfilAPI>("http://localhost:8000/api/profile/me/", {
         headers: { Authorization: `Bearer ${token}` },
       })
       const perfil = response.data
@@ -75,7 +75,6 @@ export function InterfacePerfil() {
           ? new Date(perfil.user.date_joined).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
           : "",
         website: "",
-        generosPreferidos: ["Ficção Científica", "Drama", "Romance"],
         imagem: perfil.imagem || "",
         seguidores: perfil.seguidores || 0,
         seguindo: perfil.seguindo || 0,
@@ -100,13 +99,6 @@ export function InterfacePerfil() {
     avaliacaoMedia: 4.6,
   }
 
-  const atividadeRecente = [
-    { tipo: "publicou", titulo: "Sertão Digital", data: "2 dias atrás" },
-    { tipo: "terminou", titulo: "A Rendeira de Aquiraz", data: "1 semana atrás" },
-    { tipo: "curtiu", titulo: "Memórias do Açude", data: "2 semanas atrás" },
-    { tipo: "seguiu", usuario: "Maria Santos", data: "3 semanas atrás" },
-  ]
-
   const cidades = [
     "Fortaleza",
     "Caucaia",
@@ -118,19 +110,6 @@ export function InterfacePerfil() {
     "Maranguape",
     "Iguatu",
     "Quixadá",
-  ]
-
-  const generos = [
-    "Romance",
-    "Drama",
-    "Ficção",
-    "Crônica",
-    "Poesia",
-    "Fantasia",
-    "Mistério",
-    "Aventura",
-    "Ficção Científica",
-    "Folclore",
   ]
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +156,7 @@ export function InterfacePerfil() {
       } else if (dadosPerfil.imagem === "") {
         payload.imagem_base64 = "";
       }
-      await axios.patch("http://localhost:8000/api/profiles/me/", payload, {
+      await axios.patch("http://localhost:8000/api/profile/me/", payload, {
         headers: { Authorization: `Bearer ${token}` },
       })
       await fetchPerfil()
@@ -239,52 +218,27 @@ export function InterfacePerfil() {
                 <p className="text-sm text-[#6e6e6e] leading-relaxed">{dadosPerfil.biografia || "Sem biografia."}</p>
               </div>
 
-              {/* Estatísticas */}
-              {/* Remover */}
-
-              {/* Gêneros Favoritos */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-[#131313] mb-3">Gêneros Favoritos</h4>
-                <div className="flex flex-wrap gap-2">
-                  {dadosPerfil.generosPreferidos.map((genero) => (
-                    <Badge key={genero} variant="secondary" className="text-xs">
-                      {genero}
-                    </Badge>
-                  ))}
+              <div className="flex justify-around text-center mb-6 border-t border-b py-4">
+                <div>
+                  <p className="font-bold text-lg">{dadosPerfil.seguidores}</p>
+                  <Link href={`/perfil/${usuario?.email || "usuario"}/seguidores`} className="text-sm text-gray-600 hover:underline">
+                    Seguidores
+                  </Link>
+                </div>
+                <div>
+                  <p className="font-bold text-lg">{dadosPerfil.seguindo}</p>
+                  <Link href={`/perfil/${usuario?.email || "usuario"}/seguindo`} className="text-sm text-gray-600 hover:underline">
+                    Seguindo
+                  </Link>
                 </div>
               </div>
 
-              <Button onClick={() => setEstaEditando(true)} className="w-full bg-[#009c3b] hover:bg-[#009c3b]/90">
+              <Button onClick={() => setEstaEditando(true)} className="w-full bg-[#009c3b] hover:bg-[#009c3b]/90 mt-2">
                 <Edit className="w-4 h-4 mr-2" />
                 Editar Perfil
               </Button>
             </Card>
 
-            {/* Atividade Recente */}
-            <Card className="p-6 mt-6">
-              <h4 className="font-semibold text-[#131313] mb-4">Atividade Recente</h4>
-              <div className="space-y-3">
-                {atividadeRecente.map((atividade, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#009c3b]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      {atividade.tipo === "publicou" && <BookOpen className="w-4 h-4 text-[#009c3b]" />}
-                      {atividade.tipo === "terminou" && <BookOpen className="w-4 h-4 text-[#009c3b]" />}
-                      {atividade.tipo === "curtiu" && <Heart className="w-4 h-4 text-[#009c3b]" />}
-                      {atividade.tipo === "seguiu" && <Users className="w-4 h-4 text-[#009c3b]" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-[#131313]">
-                        {atividade.tipo === "publicou" && `Publicou "${atividade.titulo}"`}
-                        {atividade.tipo === "terminou" && `Terminou de ler "${atividade.titulo}"`}
-                        {atividade.tipo === "curtiu" && `Curtiu "${atividade.titulo}"`}
-                        {atividade.tipo === "seguiu" && `Começou a seguir ${atividade.usuario}`}
-                      </p>
-                      <p className="text-xs text-[#6e6e6e]">{atividade.data}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
           </div>
 
           {/* Conteúdo Principal */}
@@ -390,41 +344,6 @@ export function InterfacePerfil() {
                           placeholder="https://..."
                           className="mt-1"
                         />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-[#131313] mb-3 block">
-                        Gêneros Favoritos (máximo 5)
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {generos.map((genero) => (
-                          <Badge
-                            key={genero}
-                            variant={dadosPerfil.generosPreferidos.includes(genero) ? "default" : "outline"}
-                            className={`cursor-pointer ${
-                              dadosPerfil.generosPreferidos.includes(genero)
-                                ? "bg-[#009c3b] hover:bg-[#009c3b]/90"
-                                : "hover:border-[#009c3b]"
-                            }`}
-                            onClick={() => {
-                              const generosAtuais = dadosPerfil.generosPreferidos
-                              if (generosAtuais.includes(genero)) {
-                                setDadosPerfil({
-                                  ...dadosPerfil,
-                                  generosPreferidos: generosAtuais.filter((g) => g !== genero),
-                                })
-                              } else if (generosAtuais.length < 5) {
-                                setDadosPerfil({
-                                  ...dadosPerfil,
-                                  generosPreferidos: [...generosAtuais, genero],
-                                })
-                              }
-                            }}
-                          >
-                            {genero}
-                          </Badge>
-                        ))}
                       </div>
                     </div>
 

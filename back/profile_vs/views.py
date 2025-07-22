@@ -18,6 +18,35 @@ class PublicProfileView(generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
     lookup_field = 'user__username'
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
+class SeguidoresListView(generics.ListAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+        try:
+            user = User.objects.get(username=username)
+            return user.profile.seguidores.all()
+        except User.DoesNotExist:
+            return UserProfile.objects.none()
+
+class SeguindoListView(generics.ListAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+        try:
+            user = User.objects.get(username=username)
+            return user.profile.seguindo.all()
+        except User.DoesNotExist:
+            return UserProfile.objects.none()
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def seguir_usuario(request, username):
