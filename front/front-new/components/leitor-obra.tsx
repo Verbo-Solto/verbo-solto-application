@@ -1,25 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import axios from "axios"
-import {
-  Heart,
-  MessageCircle,
-  Star,
-  Share2,
-  Bookmark,
-  Eye,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-  Users,
-} from "lucide-react"
+import { Heart, MessageCircle, Star, Share2, Bookmark, Eye, Clock, ChevronLeft, ChevronRight, Settings, Users } from "lucide-react"
 
 interface LeitorObraProps {
   obraId: string
@@ -30,10 +18,18 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [curtiu, setCurtiu] = useState(false)
-  const [salvou, setSalvou] = useState(false)
-  const [tamanhoFonte, setTamanhoFonte] = useState(16)
-  const [progressoLeitura, setProgressoLeitura] = useState(35)
-  const [paginaAtual, setPaginaAtual] = useState(0) // Nova state para controlar a página atual
+  const [salvou, setSalvou] = useState(false);
+  const [tamanhoFonte, setTamanhoFonte] = useState(16);
+  const [progressoLeitura, setProgressoLeitura] = useState(0);
+  const progressoMaximoRef = useRef(0);
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [obraLida, setObraLida] = useState(false);
+
+  const handleMarcarComoLida = () => {
+    setObraLida(true)
+    // Em uma aplicação real, você faria uma chamada de API aqui para salvar o status
+    console.log(`Obra ${obraId} marcada como lida.`)
+  }
 
   // Buscar dados da obra da API
   useEffect(() => {
@@ -73,21 +69,24 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
   // Calcular progresso baseado na página atual
   useEffect(() => {
     if (totalPaginas > 1) {
-      const progressoPagina = ((paginaAtual + 1) / totalPaginas) * 100
-      setProgressoLeitura(Math.min(100, Math.max(0, progressoPagina)))
+      const progressoPagina = ((paginaAtual + 1) / totalPaginas) * 100;
+      setProgressoLeitura(Math.min(100, Math.max(0, progressoPagina)));
+      progressoMaximoRef.current = 0; // resetar para paginadas
     } else {
-      // Para obras de página única, usar scroll como antes
+      // Para obras de página única, progresso só aumenta
       const handleScroll = () => {
-        const scrollTop = window.scrollY
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight
-        const scrollPercent = (scrollTop / docHeight) * 100
-        setProgressoLeitura(Math.min(100, Math.max(0, scrollPercent)))
-      }
-
-      window.addEventListener("scroll", handleScroll)
-      return () => window.removeEventListener("scroll", handleScroll)
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollPercent = (scrollTop / docHeight) * 100;
+        if (scrollPercent > progressoMaximoRef.current) {
+          progressoMaximoRef.current = scrollPercent;
+          setProgressoLeitura(Math.min(100, Math.max(0, scrollPercent)));
+        }
+      };
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
     }
-  }, [paginaAtual, totalPaginas])
+  }, [paginaAtual, totalPaginas]);
 
   if (carregando) {
     return (
@@ -273,32 +272,48 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
           )}
         </div>
         
-        {/* Navegação inferior */}
-        {totalPaginas > 1 && (
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#e2e2e2]">
-            <Button 
-              variant="outline" 
-              disabled={paginaAtual === 0}
-              onClick={irParaPaginaAnterior}
-              className="disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Página Anterior
-            </Button>
-            
-            <span className="text-sm text-[#6e6e6e] font-medium">
-              {paginaAtual + 1} de {totalPaginas}
-            </span>
-            
-            <Button 
-              variant="outline" 
-              disabled={paginaAtual >= totalPaginas - 1}
-              onClick={irParaProximaPagina}
-              className="disabled:opacity-50"
-            >
-              Próxima Página
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
+        {/* Navegação inferior e Confirmação de Leitura */}
+        {(totalPaginas > 1 || progressoLeitura >= 100) && (
+          <div className="flex flex-col items-center mt-8 pt-6 border-t border-[#e2e2e2]">
+            {totalPaginas > 1 && (
+              <div className="flex justify-between items-center w-full">
+                <Button
+                  variant="outline"
+                  disabled={paginaAtual === 0}
+                  onClick={irParaPaginaAnterior}
+                  className="disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Página Anterior
+                </Button>
+
+                <span className="text-sm text-[#6e6e6e] font-medium">
+                  {paginaAtual + 1} de {totalPaginas}
+                </span>
+
+                <Button
+                  variant="outline"
+                  disabled={paginaAtual >= totalPaginas - 1}
+                  onClick={irParaProximaPagina}
+                  className="disabled:opacity-50"
+                >
+                  Próxima Página
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            )}
+
+            {progressoLeitura >= 100 && !obraLida && (
+              <div className="mt-8 text-center">
+                <p className="text-lg font-semibold text-[#131313] mb-2">Você concluiu a obra!</p>
+                <Button onClick={handleMarcarComoLida} className="bg-[#009c3b] hover:bg-[#009c3b]/90">
+                  Marcar como lida
+                </Button>
+              </div>
+            )}
+             {obraLida && (
+              <p className="mt-8 text-lg font-semibold text-green-600">Você já marcou esta obra como lida.</p>
+            )}
           </div>
         )}
       </Card>
@@ -320,3 +335,4 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
     </div>
   )
 }
+

@@ -54,7 +54,7 @@ export function InterfaceBiblioteca() {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <h4 className="font-semibold text-[#131313]">{livro.titulo}</h4>
-                  <p className="text-sm text-[#6e6e6e]">por {livro.autor}</p>
+                  <p className="text-sm text-[#6e6e6e]">por {livro.autor?.username}</p>
                 </div>
                 <Badge variant="outline">{livro.genero}</Badge>
               </div>
@@ -120,7 +120,7 @@ export function InterfaceBiblioteca() {
             </Badge>
           </div>
           <h4 className="font-semibold text-[#131313] mb-1">{livro.titulo}</h4>
-          <p className="text-sm text-[#6e6e6e] mb-3">por {livro.autor}</p>
+          <p className="text-sm text-[#6e6e6e] mb-3">por {livro.autor?.username}</p>
 
           {tipo === "lendo" && (
             <div className="mb-3">

@@ -18,10 +18,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     seguindo = serializers.SerializerMethodField()
     seguidores = serializers.SerializerMethodField()
     imagem_base64 = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    is_following = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
-        fields = ['user', 'bio', 'cidade', 'imagem', 'imagem_base64', 'seguindo', 'seguidores']
+        fields = ['user', 'bio', 'cidade', 'imagem', 'imagem_base64', 'seguindo', 'seguidores', 'is_following']
         read_only_fields = ['imagem']
 
     def get_seguindo(self, obj):
@@ -29,6 +30,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_seguidores(self, obj):
         return obj.seguidores.count()
+
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return request.user.profile.seguindo.filter(pk=obj.pk).exists()
+        return False
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
