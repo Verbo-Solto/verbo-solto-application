@@ -267,11 +267,7 @@ export function LeitorObra({ obraId }: LeitorObraProps) {
           style={{ fontSize: `${tamanhoFonte}px` }}
         >
           {paginaAtualConteudo ? (
-            paginaAtualConteudo.split("\n\n").map((paragrafo: any, index: any) => (
-              <p key={index} className="mb-6">
-                {paragrafo.trim()}
-              </p>
-            ))
+            <div className="whitespace-pre-wrap break-words">{paginaAtualConteudo}</div>
           ) : (
             <p className="text-[#6e6e6e] italic">Conteúdo não disponível</p>
           )}
