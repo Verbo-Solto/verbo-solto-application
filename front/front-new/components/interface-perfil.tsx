@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import axios from "axios"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,9 @@ export function InterfacePerfil() {
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState<string | null>(null)
+  // Feedback visual
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [dadosPerfil, setDadosPerfil] = useState({
     nome: "",
@@ -130,14 +133,34 @@ export function InterfacePerfil() {
     "Folclore",
   ]
 
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = (ev.target?.result as string).split(",")[1];
+        setDadosPerfil((prev) => ({ ...prev, imagem: base64 }));
+        setFeedback("Foto atualizada! Clique em salvar para confirmar.");
+        setTimeout(() => setFeedback(null), 2000);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoverFoto = () => {
+    setDadosPerfil((prev) => ({ ...prev, imagem: "" }));
+    setFeedback("Foto removida! Clique em salvar para confirmar.");
+    setTimeout(() => setFeedback(null), 2000);
+  };
+
   const handleSalvar = async () => {
     setSalvando(true)
-    setErro(null)
-    setSucesso(null)
+    setFeedback(null)
     const token = localStorage.getItem("access")
     if (!token) {
-      setErro("Você precisa estar logado para editar seu perfil.")
+      setFeedback("Erro ao salvar perfil.");
       setSalvando(false)
+      setTimeout(() => setFeedback(null), 3000);
       return
     }
     try {
@@ -148,17 +171,23 @@ export function InterfacePerfil() {
           first_name: dadosPerfil.nome,
           email: dadosPerfil.email,
         },
+      };
+      if (dadosPerfil.imagem && dadosPerfil.imagem.length > 100) {
+        payload.imagem_base64 = dadosPerfil.imagem;
+      } else if (dadosPerfil.imagem === "") {
+        payload.imagem_base64 = "";
       }
       await axios.patch("http://localhost:8000/api/profiles/me/", payload, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      await fetchPerfil() // <- Atualiza o estado com os dados salvos
-      setSucesso("Perfil atualizado com sucesso!")
+      await fetchPerfil()
+      setFeedback("Perfil atualizado!");
       setEstaEditando(false)
     } catch (err) {
-      setErro("Erro ao salvar perfil.")
+      setFeedback("Erro ao salvar perfil.");
     } finally {
       setSalvando(false)
+      setTimeout(() => setFeedback(null), 3000);
     }
   }
 
@@ -168,8 +197,7 @@ export function InterfacePerfil() {
         <h1 className="text-3xl font-bold text-[#131313] mb-2">Meu Perfil</h1>
         <p className="text-[#6e6e6e]">Gerencie suas informações pessoais e preferências</p>
       </div>
-      {erro && <div className="text-center text-red-600 mb-4">{erro}</div>}
-      {sucesso && <div className="text-center text-green-600 mb-4">{sucesso}</div>}
+      {/* Remover mensagens de validação */}
       {carregando ? (
         <div className="text-center text-gray-600">Carregando perfil...</div>
       ) : (
@@ -178,18 +206,26 @@ export function InterfacePerfil() {
           <div className="lg:col-span-1">
             <Card className="p-6">
               <div className="text-center mb-6">
-                <div className="relative inline-block">
-                  <Avatar className="w-24 h-24 mx-auto mb-4">
-                    <AvatarImage src={dadosPerfil.imagem || "/placeholder.svg?height=96&width=96"} alt={dadosPerfil.nome} />
-                    <AvatarFallback className="text-2xl">
+                <div className="relative flex flex-col items-center mb-6">
+                  <Avatar className="w-32 h-32 mx-auto mb-2 shadow-lg border-4 border-[#e6f4ec]">
+                    <AvatarImage src={dadosPerfil.imagem ? (dadosPerfil.imagem.length > 100 ? `data:image/png;base64,${dadosPerfil.imagem}` : dadosPerfil.imagem) : "/placeholder-user.jpg"} alt={dadosPerfil.nome} />
+                    <AvatarFallback className="text-3xl">
                       {dadosPerfil.nome
                         ? dadosPerfil.nome.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
                         : "US"}
                     </AvatarFallback>
                   </Avatar>
-                  <Button variant="outline" size="icon" className="absolute bottom-0 right-0 rounded-full w-8 h-8">
-                    <Camera className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                      <Camera className="w-4 h-4 mr-1" /> Trocar foto
+                    </Button>
+                    {dadosPerfil.imagem && (
+                      <Button variant="ghost" size="sm" onClick={handleRemoverFoto} title="Remover foto">
+                        ✕ Remover
+                      </Button>
+                    )}
+                  </div>
+                  <input ref={fileInputRef} id="foto-perfil-upload" type="file" accept="image/*" onChange={handleFotoChange} className="hidden" />
                 </div>
                 <h3 className="text-xl font-bold text-[#131313] mb-1">{dadosPerfil.nome || "Nome não informado"}</h3>
                 <p className="text-[#6e6e6e] text-sm mb-2">{dadosPerfil.email || "E-mail não informado"}</p>
@@ -253,7 +289,7 @@ export function InterfacePerfil() {
 
           {/* Conteúdo Principal */}
           <div className="lg:col-span-2">
-            {/* Abas de Navegação */}
+            {/* Abas de Navegação - apenas Perfil */}
             <div className="flex gap-1 mb-8 bg-[#f4f4f4] p-1 rounded-lg w-fit">
               <Button
                 variant={abaAtiva === "perfil" ? "default" : "ghost"}
@@ -263,27 +299,14 @@ export function InterfacePerfil() {
                 <User className="w-4 h-4 mr-2" />
                 Perfil
               </Button>
-              <Button
-                variant={abaAtiva === "configuracoes" ? "default" : "ghost"}
-                onClick={() => setAbaAtiva("configuracoes")}
-                className={abaAtiva === "configuracoes" ? "bg-[#009c3b] text-white" : ""}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Configurações
-              </Button>
-              <Button
-                variant={abaAtiva === "privacidade" ? "default" : "ghost"}
-                onClick={() => setAbaAtiva("privacidade")}
-                className={abaAtiva === "privacidade" ? "bg-[#009c3b] text-white" : ""}
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                Privacidade
-              </Button>
             </div>
 
             {/* Aba Perfil */}
             {abaAtiva === "perfil" && (
-              <Card className="p-6">
+              <Card className="p-6 max-w-2xl mx-auto shadow-xl rounded-2xl border border-[#e6f4ec] bg-white">
+                {feedback && (
+                  <div className={`mb-4 text-center font-medium ${feedback.includes('Erro') ? 'text-red-600' : 'text-green-600'}`}>{feedback}</div>
+                )}
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-[#131313]">Informações Pessoais</h3>
                   {!estaEditando && (
@@ -445,120 +468,6 @@ export function InterfacePerfil() {
                   </div>
                 )}
               </Card>
-            )}
-
-            {/* Aba Configurações */}
-            {abaAtiva === "configuracoes" && (
-              <div className="space-y-6">
-                <Card className="p-6">
-                  <h3 className="text-xl font-semibold text-[#131313] mb-6">Notificações</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-[#f4f4f4] rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-[#131313]">Novas obras de autores seguidos</h4>
-                        <p className="text-sm text-[#6e6e6e]">
-                          Receba notificações quando autores que você segue publicarem
-                        </p>
-                      </div>
-                      <Button variant="outline">Ativado</Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-[#f4f4f4] rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-[#131313]">Comentários nas suas obras</h4>
-                        <p className="text-sm text-[#6e6e6e]">Seja notificado quando alguém comentar suas obras</p>
-                      </div>
-                      <Button variant="outline">Ativado</Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-[#f4f4f4] rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-[#131313]">Newsletter semanal</h4>
-                        <p className="text-sm text-[#6e6e6e]">Receba um resumo semanal das melhores obras</p>
-                      </div>
-                      <Button variant="outline">Desativado</Button>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-6">
-                  <h3 className="text-xl font-semibold text-[#131313] mb-6">Preferências de Leitura</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-[#131313]">Tamanho da fonte padrão</Label>
-                      <Select defaultValue="16">
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="14">Pequena (14px)</SelectItem>
-                          <SelectItem value="16">Média (16px)</SelectItem>
-                          <SelectItem value="18">Grande (18px)</SelectItem>
-                          <SelectItem value="20">Extra Grande (20px)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-[#131313]">Tema de leitura</Label>
-                      <Select defaultValue="claro">
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="claro">Claro</SelectItem>
-                          <SelectItem value="escuro">Escuro</SelectItem>
-                          <SelectItem value="sepia">Sépia</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* Aba Privacidade */}
-            {abaAtiva === "privacidade" && (
-              <div className="space-y-6">
-                <Card className="p-6">
-                  <h3 className="text-xl font-semibold text-[#131313] mb-6">Configurações de Privacidade</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-[#f4f4f4] rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-[#131313]">Perfil público</h4>
-                        <p className="text-sm text-[#6e6e6e]">Permitir que outros usuários vejam seu perfil</p>
-                      </div>
-                      <Button variant="outline">Público</Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-[#f4f4f4] rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-[#131313]">Mostrar estatísticas de leitura</h4>
-                        <p className="text-sm text-[#6e6e6e]">Exibir quantas obras você leu e suas avaliações</p>
-                      </div>
-                      <Button variant="outline">Visível</Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-[#f4f4f4] rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-[#131313]">Permitir mensagens diretas</h4>
-                        <p className="text-sm text-[#6e6e6e]">Outros usuários podem enviar mensagens para você</p>
-                      </div>
-                      <Button variant="outline">Permitido</Button>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-6">
-                  <h3 className="text-xl font-semibold text-[#131313] mb-6">Dados da Conta</h3>
-                  <div className="space-y-4">
-                    <Button variant="outline" className="w-full justify-start">
-                      Baixar meus dados
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      Excluir conta
-                    </Button>
-                  </div>
-                </Card>
-              </div>
             )}
           </div>
         </div>

@@ -25,6 +25,8 @@ class Obra(models.Model):
     titulo = models.CharField(max_length=120)
     slug = models.SlugField(max_length=140, unique=True, blank=True)
     conteudo = models.TextField(blank=True, default='')  # Valor padrão para evitar problemas de migração
+    rascunho = models.TextField(blank=True, default='')  # Texto do rascunho editável
+    publicado = models.BooleanField(default=False)  # Indica se a obra está publicada
     genero = models.CharField(max_length=40)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='rascunho')
     autor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='obras')
@@ -60,11 +62,12 @@ class Obra(models.Model):
         return f"{self.titulo} ({self.autor.username})"
 
 class Capitulo(models.Model):
-    colecao = models.ForeignKey(Colecao, on_delete=models.CASCADE, related_name="capitulos")
+    obra = models.ForeignKey(Obra, on_delete=models.CASCADE, related_name="capitulos")
     titulo = models.CharField(max_length=120)
-    conteudo = models.TextField(max_length=20000)
+    descricao = models.TextField(blank=True, default="")
     ordem = models.PositiveIntegerField()
+    paginas = models.JSONField(default=list)  # Cada página é um HTML/texto
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.titulo} (Coleção: {self.colecao.nome})"
+        return f"{self.titulo} (Obra: {self.obra.titulo})"

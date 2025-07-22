@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,93 +8,38 @@ import { Progress } from "@/components/ui/progress"
 import { BookOpen, Heart, Star, Clock, Users, Filter, Grid, List, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import axios from "axios"
 
 export function InterfaceBiblioteca() {
   const [abaAtiva, setAbaAtiva] = useState("lendo")
   const [modoVisualizacao, setModoVisualizacao] = useState<"grade" | "lista">("grade")
 
-  const listaLeitura = [
-    {
-      id: 1,
-      titulo: "Sertão Digital",
-      autor: "Maria Santos",
-      avatarAutor: "/placeholder.svg?height=40&width=40",
-      progresso: 65,
-      ultimaLeitura: "Ontem",
-      avaliacao: 0,
-      genero: "Ficção Científica",
-      tempoEstimado: "8 min restantes",
-      corCapa: "bg-gradient-to-br from-blue-500 to-teal-500",
-    },
-    {
-      id: 2,
-      titulo: "A Rendeira de Aquiraz",
-      autor: "Ana Costa",
-      avatarAutor: "/placeholder.svg?height=40&width=40",
-      progresso: 30,
-      ultimaLeitura: "2 dias atrás",
-      avaliacao: 0,
-      genero: "Romance",
-      tempoEstimado: "25 min restantes",
-      corCapa: "bg-gradient-to-br from-pink-500 to-rose-500",
-    },
-  ]
+  // Dados reais
+  const [leituras, setLeituras] = useState<any[]>([])
+  const [finalizados, setFinalizados] = useState<any[]>([])
+  const [favoritos, setFavoritos] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const livrosFinalizados = [
-    {
-      id: 3,
-      titulo: "Memórias do Açude",
-      autor: "João Oliveira",
-      avatarAutor: "/placeholder.svg?height=40&width=40",
-      progresso: 100,
-      finalizadoEm: "1 semana atrás",
-      avaliacao: 5,
-      genero: "Drama",
-      corCapa: "bg-gradient-to-br from-amber-500 to-orange-500",
-    },
-    {
-      id: 4,
-      titulo: "Contos do Cariri",
-      autor: "Carlos Mendes",
-      avatarAutor: "/placeholder.svg?height=40&width=40",
-      progresso: 100,
-      finalizadoEm: "2 semanas atrás",
-      avaliacao: 4,
-      genero: "Folclore",
-      corCapa: "bg-gradient-to-br from-green-500 to-emerald-500",
-    },
-  ]
-
-  const livrosFavoritos = [
-    {
-      id: 5,
-      titulo: "Vento Norte",
-      autor: "Lucia Ferreira",
-      avatarAutor: "/placeholder.svg?height=40&width=40",
-      avaliacao: 5,
-      genero: "Drama",
-      adicionadoEm: "3 dias atrás",
-      corCapa: "bg-gradient-to-br from-purple-500 to-indigo-500",
-    },
-    {
-      id: 6,
-      titulo: "Noites de Forró",
-      autor: "Roberto Silva",
-      avatarAutor: "/placeholder.svg?height=40&width=40",
-      avaliacao: 5,
-      genero: "Romance",
-      adicionadoEm: "1 semana atrás",
-      corCapa: "bg-gradient-to-br from-red-500 to-pink-500",
-    },
-  ]
+  useEffect(() => {
+    const token = localStorage.getItem("access");
+    if (!token) return;
+    setLoading(true);
+    axios.get("http://localhost:8000/api/biblioteca/", {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(resp => {
+      setLeituras(resp.data.lendo || [])
+      setFinalizados(resp.data.finalizados || [])
+      setFavoritos(resp.data.favoritos || [])
+    }).finally(() => setLoading(false));
+  }, []);
 
   const estatisticasLeitura = {
-    livrosLidos: livrosFinalizados.length,
-    livrosLendo: listaLeitura.length,
-    livrosFavoritos: livrosFavoritos.length,
-    tempoTotalLeitura: "48h 32m",
-    avaliacaoMedia: 4.5,
-    sequenciaLeitura: 7,
+    livrosLidos: finalizados.length,
+    livrosLendo: leituras.length,
+    livrosFavoritos: favoritos.length,
+    tempoTotalLeitura: "-",
+    avaliacaoMedia: finalizados.length > 0 ? (finalizados.reduce((acc, l) => acc + (l.avaliacao || 0), 0) / finalizados.length).toFixed(1) : "-",
+    sequenciaLeitura: "-",
   }
 
   const renderizarCardLivro = (livro: any, tipo: "lendo" | "finalizado" | "favorito") => {
@@ -270,7 +215,7 @@ export function InterfaceBiblioteca() {
                 : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
             }
           >
-            Lendo ({listaLeitura.length})
+            Lendo ({leituras.length})
           </Button>
           <Button
             variant={abaAtiva === "finalizadas" ? "default" : "ghost"}
@@ -281,7 +226,7 @@ export function InterfaceBiblioteca() {
                 : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
             }
           >
-            Finalizadas ({livrosFinalizados.length})
+            Finalizadas ({finalizados.length})
           </Button>
           <Button
             variant={abaAtiva === "favoritas" ? "default" : "ghost"}
@@ -292,7 +237,7 @@ export function InterfaceBiblioteca() {
                 : "hover:bg-[#009c3b]/10 border border-[#009c3b] text-[#131313]"
             }
           >
-            Favoritas ({livrosFavoritos.length})
+            Favoritas ({favoritos.length})
           </Button>
         </div>
 
@@ -329,27 +274,33 @@ export function InterfaceBiblioteca() {
       {abaAtiva === "lendo" && (
         <div>
           <h3 className="text-xl font-semibold text-[#131313] mb-6">Continue Lendo</h3>
-          <div className={modoVisualizacao === "grade" ? "grid md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-4"}>
-            {listaLeitura.map((livro) => renderizarCardLivro(livro, "lendo"))}
-          </div>
+          {loading ? <p>Carregando...</p> : (
+            <div className={modoVisualizacao === "grade" ? "grid md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-4"}>
+              {leituras.map((livro) => renderizarCardLivro(livro, "lendo"))}
+            </div>
+          )}
         </div>
       )}
 
       {abaAtiva === "finalizadas" && (
         <div>
           <h3 className="text-xl font-semibold text-[#131313] mb-6">Obras Finalizadas</h3>
-          <div className={modoVisualizacao === "grade" ? "grid md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-4"}>
-            {livrosFinalizados.map((livro) => renderizarCardLivro(livro, "finalizado"))}
-          </div>
+          {loading ? <p>Carregando...</p> : (
+            <div className={modoVisualizacao === "grade" ? "grid md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-4"}>
+              {finalizados.map((livro) => renderizarCardLivro(livro, "finalizado"))}
+            </div>
+          )}
         </div>
       )}
 
       {abaAtiva === "favoritas" && (
         <div>
           <h3 className="text-xl font-semibold text-[#131313] mb-6">Obras Favoritas</h3>
-          <div className={modoVisualizacao === "grade" ? "grid md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-4"}>
-            {livrosFavoritos.map((livro) => renderizarCardLivro(livro, "favorito"))}
-          </div>
+          {loading ? <p>Carregando...</p> : (
+            <div className={modoVisualizacao === "grade" ? "grid md:grid-cols-2 lg:grid-cols-4 gap-6" : "space-y-4"}>
+              {favoritos.map((livro) => renderizarCardLivro(livro, "favorito"))}
+            </div>
+          )}
         </div>
       )}
     </div>
