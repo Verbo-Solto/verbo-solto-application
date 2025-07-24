@@ -1,8 +1,11 @@
+# allauth_vs/views.py
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from rest_framework.permissions import AllowAny
+from profile_vs.models import UserProfile
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
@@ -12,6 +15,8 @@ class RegisterAPIView(APIView):
         email = request.data.get('email')
         password = request.data.get('password')
         full_name = request.data.get('full_name', '')
+        bio = request.data.get('bio', '') or request.data.get('biografia', '')
+        cidade = request.data.get('cidade', '')
 
         if not username or not email or not password:
             return Response({'error': 'Todos os campos são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -25,4 +30,16 @@ class RegisterAPIView(APIView):
         if full_name:
             user.first_name = full_name
             user.save()
-        return Response({'message': 'Usuário registrado com sucesso.'}, status=status.HTTP_201_CREATED)
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.bio = bio
+        profile.cidade = cidade
+        profile.save()
+
+        # Login automático após cadastro
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'message': 'Usuário registrado com sucesso.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        }, status=status.HTTP_201_CREATED)

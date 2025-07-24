@@ -2,12 +2,12 @@
 
 import { Cabecalho } from "@/components/cabecalho"
 import { InterfaceBiblioteca } from "@/components/interface-biblioteca"
+import { PageLayout } from "@/components/PageLayout"
 
 export default function PaginaBiblioteca() {
   return (
-    <div className="min-h-screen bg-[#fefefe]">
-      <Cabecalho onAuthClick={() => {}} estaAutenticado={true} />
+    <PageLayout cabecalhoProps={{ onAuthClick: () => {}, estaAutenticado: true }}>
       <InterfaceBiblioteca />
-    </div>
+    </PageLayout>
   )
 }
