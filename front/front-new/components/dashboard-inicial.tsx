@@ -58,11 +58,11 @@ export function DashboardInicial() {
     return (
       <div className="flex items-center justify-center min-h-screen text-center text-red-600 bg-red-50 p-4">
         <div>
-            <h2 className="text-2xl font-bold mb-2">Oops! Algo correu mal.</h2>
-            <p className="max-w-md">{error}</p>
-            <Button onClick={() => window.location.reload()} className="mt-4 bg-red-600 hover:bg-red-700">
-                Tentar Novamente
-            </Button>
+          <h2 className="text-2xl font-bold mb-2">Oops! Algo correu mal.</h2>
+          <p className="max-w-md">{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4 bg-red-600 hover:bg-red-700">
+            Tentar Novamente
+          </Button>
         </div>
       </div>
     )
@@ -70,17 +70,17 @@ export function DashboardInicial() {
 
   if (isLoading) {
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
-            <div className="h-10 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
-            <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto mb-12"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>)}
-            </div>
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {[...Array(3)].map((_, i) => <div key={i} className="h-96 bg-gray-200 rounded-lg"></div>)}
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
+        <div className="h-10 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+        <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto mb-12"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>)}
         </div>
+        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-96 bg-gray-200 rounded-lg"></div>)}
+        </div>
+      </div>
     )
   }
 
@@ -127,7 +127,7 @@ export function DashboardInicial() {
         <section className="pt-8 pb-6 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Bem-vindo de volta! 👋</h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">Continue sua jornada literária e descubra novas histórias cearenses</p>
-        </section>
+        </section>  
 
         <section className="mb-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

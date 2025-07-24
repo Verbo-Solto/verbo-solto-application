@@ -286,11 +286,11 @@ export function InterfaceMinhasObras() {
                   </div>
                 ) : (
                   obrasPublicadas.map((obra) => (
-                  <Card key={obra.id} className="p-6">
-                    <div className="flex items-start gap-4">
+                  <Card key={obra.id} className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-start gap-4">
                       {/* Exibe a capa da obra se existir */}
                       {obra.capa && (
-                        <div className="flex-shrink-0 rounded-lg overflow-hidden border border-[#e5e7eb] bg-[#f4f4f4] flex items-center justify-center" style={{ width: 90, height: 120 }}>
+                        <div className="flex-shrink-0 w-full md:w-[90px] h-auto md:h-[120px] rounded-lg overflow-hidden border border-[#e5e7eb] bg-[#f4f4f4] flex items-center justify-center">
                           <img
                             src={`data:image/png;base64,${obra.capa}`}
                             alt={`Capa de ${obra.titulo}`}
@@ -300,12 +300,12 @@ export function InterfaceMinhasObras() {
                       )}
                       <div className="flex-1 flex flex-col min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-lg font-semibold text-[#131313]">{obra.titulo}</h4>
-                          <Badge className="bg-[#009c3b]">Publicada</Badge>
+                          <h4 className="text-lg font-semibold text-[#131313] truncate" title={obra.titulo}>{obra.titulo}</h4>
+                          <Badge className="bg-[#009c3b] flex-shrink-0">Publicada</Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-[#6e6e6e] mb-3">
+                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-[#6e6e6e] mb-3">
                           <span>{obra.genero}</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {obra.publicada_em
@@ -322,11 +322,11 @@ export function InterfaceMinhasObras() {
                         </div>
                         {/* Quebra de linhas no resumo */}
                         {obra.resumo && (
-                          <div className="text-sm text-[#6e6e6e] mb-3 whitespace-pre-line">
+                          <div className="text-sm text-[#6e6e6e] mb-3 whitespace-pre-line break-all">
                             {obra.resumo}
                           </div>
                         )}
-                        <div className="flex items-center gap-6 text-sm text-[#6e6e6e]">
+                        <div className="flex items-center flex-wrap gap-x-6 gap-y-2 text-sm text-[#6e6e6e]">
                           <div className="flex items-center gap-1">
                             <Eye className="w-4 h-4" />
                             {obra.visualizacoes}
@@ -345,7 +345,7 @@ export function InterfaceMinhasObras() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-start md:justify-end gap-2 mt-4 md:mt-0 md:flex-col md:items-end">
                         <Link href={`/obra/${obra.id}`}>
                           <Button variant="ghost" size="icon" title="Visualizar">
                             <Eye className="w-4 h-4" />
@@ -383,11 +383,11 @@ export function InterfaceMinhasObras() {
                   </div>
                 ) : (
                   rascunhos.map((obra) => (
-                  <Card key={obra.id} className="p-6">
-                    <div className="flex items-start gap-4">
+                  <Card key={obra.id} className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-start gap-4">
                       {/* Exibe a capa da obra se existir */}
                       {obra.capa && (
-                        <div className="flex-shrink-0 rounded-lg overflow-hidden border border-[#e5e7eb] bg-[#f4f4f4] flex items-center justify-center" style={{ width: 90, height: 120 }}>
+                        <div className="flex-shrink-0 w-full md:w-[90px] h-auto md:h-[120px] rounded-lg overflow-hidden border border-[#e5e7eb] bg-[#f4f4f4] flex items-center justify-center">
                           <img
                             src={`data:image/png;base64,${obra.capa}`}
                             alt={`Capa de ${obra.titulo}`}
@@ -397,19 +397,19 @@ export function InterfaceMinhasObras() {
                       )}
                       <div className="flex-1 flex flex-col min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-lg font-semibold text-[#131313]">{obra.titulo}</h4>
-                          <Badge variant="secondary">Rascunho</Badge>
+                          <h4 className="text-lg font-semibold text-[#131313] truncate" title={obra.titulo}>{obra.titulo}</h4>
+                          <Badge variant="secondary" className="flex-shrink-0">Rascunho</Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-[#6e6e6e] mb-3">
+                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-[#6e6e6e] mb-3">
                           <span>{obra.genero}</span>
-                          <span>•</span>
+                          <span className='hidden sm:inline'>•</span>
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Editado em {obra.atualizado_em
                               ? new Date(obra.atualizado_em).toLocaleDateString("pt-BR")
                               : ""}
                           </div>
-                          <span>•</span>
+                          <span className='hidden sm:inline'>•</span>
                           <span>
                             {obra.conteudo ? obra.conteudo.split(/\s+/).filter(Boolean).length : 0} palavras
                           </span>
@@ -423,7 +423,7 @@ export function InterfaceMinhasObras() {
                         </div>
                         {/* Quebra de linhas no resumo */}
                         {obra.resumo && (
-                          <div className="text-sm text-[#6e6e6e] mb-3 whitespace-pre-line">
+                          <div className="text-sm text-[#6e6e6e] mb-3 whitespace-pre-line break-all">
                             {obra.resumo}
                           </div>
                         )}
@@ -447,11 +447,11 @@ export function InterfaceMinhasObras() {
                           />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-start md:justify-end gap-2 mt-4 md:mt-0">
                         <Link href={`/escrever?rascunho=${obra.id}`}>
                           <Button
                             variant="outline"
-                            className="border-[#009c3b] text-[#009c3b] hover:bg-[#009c3b] hover:text-white"
+                            className="border-[#009c3b] text-[#009c3b] hover:bg-[#009c3b] hover:text-white w-full sm:w-auto"
                           >
                             <Edit className="w-4 h-4 mr-2" />
                             Continuar Escrevendo

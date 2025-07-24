@@ -3,7 +3,6 @@
 import { Cabecalho } from "@/components/cabecalho"
 import { LeitorObra } from "@/components/leitor-obra"
 import { ComentariosObra } from "@/components/comentarios-obra"
-import { ObrasRelacionadas } from "@/components/obras-relacionadas"
 import { Rodape } from "@/components/rodape"
 import { useEffect, useState } from "react"
 import axios from "axios"
@@ -39,7 +38,6 @@ export default function PaginaObra({ params }: PaginaObraProps) {
           <>
             <LeitorObra obraId={params.id} />
             <ComentariosObra obraId={params.id} />
-            <ObrasRelacionadas obraId={params.id} />
           </>
         )}
       </div>

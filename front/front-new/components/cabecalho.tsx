@@ -69,19 +69,6 @@ export function Cabecalho({ onAuthClick, estaAutenticado: propEstaAutenticado }:
             ))}
           </nav>
 
-          {/* Barra de Busca */}
-          {estaAutenticado && (
-            <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#6e6e6e]" />
-                <Input
-                  placeholder="Buscar obras, autores, gêneros..."
-                  className="pl-10 bg-[#f4f4f4] border-0 focus:bg-white focus:ring-2 focus:ring-[#009c3b]"
-                />
-              </div>
-            </div>
-          )}
-
           {/* Botões de Auth / Menu do Usuário */}
           <div className="hidden md:flex items-center gap-3">
             {!estaAutenticado ? (
@@ -173,12 +160,6 @@ export function Cabecalho({ onAuthClick, estaAutenticado: propEstaAutenticado }:
         {menuMobileAberto && (
           <div className="md:hidden py-4 border-t border-[#e2e2e2] bg-white shadow-lg rounded-b-xl">
             <div className="space-y-4">
-              {estaAutenticado && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#6e6e6e]" />
-                  <Input placeholder="Buscar..." className="pl-10 bg-[#f4f4f4] border-0" />
-                </div>
-              )}
               <nav className="flex flex-col space-y-2">
                 {estaAutenticado && navLinks.map(link => (
                   <Link
